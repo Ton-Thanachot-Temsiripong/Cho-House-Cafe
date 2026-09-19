@@ -1,0 +1,693 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบ POS ร้านน้ำปั่น MR. CHO</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN สำหรับวาดกราฟ Dashboard -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS (XLSX) CDN สำหรับ Export ไฟล์ Excel -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <style>
+        .tab-btn.active {
+            background-color: white !important;
+            color: #4f46e5 !important;
+        }
+        
+        .pay-btn.selected {
+            border-color: #4f46e5 !important;
+            background-color: #4f46e5 !important;
+            color: #ffffff !important;
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3) !important;
+            transform: scale(1.02);
+        }
+
+        .pay-btn:not(.selected) {
+            border-color: #cbd5e1 !important;
+            background-color: #f8fafc !important;
+            color: #94a3b8 !important;
+            opacity: 0.6;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans">
+
+    <!-- Header Navigation -->
+    <header class="bg-indigo-600 text-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold flex items-center gap-2">
+                🍹 ร้านน้ำปั่น MR. CHO (Smoothie POS)
+            </h1>
+            <nav class="flex gap-2">
+                <button onclick="switchTab('pos')" id="tab-pos" class="tab-btn active bg-white text-indigo-600 px-4 py-2 rounded-lg font-semibold shadow">หน้าร้าน (POS)</button>
+                <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn bg-indigo-500 hover:bg-indigo-400 text-white px-4 py-2 rounded-lg font-semibold">สรุปยอดขาย</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-4">
+        <!-- ================= PAGE 1: POS SYSTEM ================= -->
+        <section id="page-pos" class="space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- เมนูเครื่องดื่มผลไม้ -->
+                <div class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                    <h2 class="text-xl font-bold mb-4 text-slate-700">เลือกเมนูน้ำปั่นผลไม้</h2>
+                    <div id="menu-grid" class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        <!-- เมนูผลไม้จะแสดงที่นี่ -->
+                    </div>
+                </div>
+
+                <!-- ตะกร้าสินค้า / ชำระเงิน -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">
+                    <div>
+                        <h2 class="text-xl font-bold mb-4 text-slate-700">รายการสั่งซื้อ</h2>
+                        <div id="cart-list" class="space-y-3 max-h-[250px] overflow-y-auto pr-2">
+                            <p class="text-slate-400 text-center py-8">ยังไม่มีรายการในตะกร้า</p>
+                        </div>
+                    </div>
+
+                    <div class="border-t pt-4 mt-6">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-slate-600 font-medium">รวมจำนวน:</span>
+                            <span id="cart-qty" class="text-lg font-bold">0 แก้ว</span>
+                        </div>
+                        <div class="flex justify-between items-center mb-4">
+                            <span class="text-slate-600 font-medium">ราคารวมทั้งหมด:</span>
+                            <span id="cart-total" class="text-2xl font-bold text-indigo-600">0 ฿</span>
+                        </div>
+
+                        <!-- เลือกช่องทางการชำระเงิน -->
+                        <label class="block text-sm font-semibold mb-2 text-slate-700">เลือกวิธีการชำระเงิน:</label>
+                        <div class="grid grid-cols-2 gap-3 mb-4">
+                            <button onclick="setPaymentMethod('เงินสด')" id="pay-cash" class="pay-btn selected border-2 py-3 rounded-xl font-bold flex justify-center items-center gap-2 transition-all">
+                                💵 เงินสด <span id="icon-cash" class="text-sm">✓</span>
+                            </button>
+                            <button onclick="setPaymentMethod('สแกน QR')" id="pay-qr" class="pay-btn border-2 py-3 rounded-xl font-bold flex justify-center items-center gap-2 transition-all">
+                                📱 สแกน QR <span id="icon-qr" class="text-sm hidden">✓</span>
+                            </button>
+                        </div>
+
+                        <button onclick="checkout()" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3 rounded-xl shadow-lg transition">
+                            บันทึกการขาย (ชำระเงิน)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ประวัติการชำระเงินล่าสุดในหน้าร้าน POS -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-slate-800">📋 รายการที่เพิ่งชำระเงินล่าสุด (หน้าร้าน)</h3>
+                    <span class="text-xs text-slate-500">*แสดงล่าสุด 5 รายการ</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b text-slate-400 text-sm">
+                                <th class="pb-3">วันที่ / เวลา</th>
+                                <th class="pb-3">รายการสินค้า</th>
+                                <th class="pb-3 text-center">วิธีชำระเงิน</th>
+                                <th class="pb-3 text-center">จำนวน</th>
+                                <th class="pb-3 text-right">ยอดรวม</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-orders-body" class="divide-y divide-slate-100 text-sm">
+                            <!-- รายการที่พึ่งชำระเงินจะแสดงที่นี่ -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= PAGE 2: DASHBOARD SUMMARY ================= -->
+        <section id="page-dashboard" class="hidden space-y-6">
+            <!-- ตัวเลือกระยะเวลา, ปุ่ม Export และปุ่ม Reset -->
+            <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-wrap gap-4 items-center justify-between">
+                <div class="flex gap-2">
+                    <button onclick="filterSummary('daily')" id="btn-daily" class="filter-btn bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium">สรุปรายวัน</button>
+                    <button onclick="filterSummary('monthly')" id="btn-monthly" class="filter-btn bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-medium">สรุปรายเดือน</button>
+                    <button onclick="filterSummary('yearly')" id="btn-yearly" class="filter-btn bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-medium">สรุปรายปี</button>
+                </div>
+                
+                <div class="flex items-center gap-2 flex-wrap">
+                    <input type="date" id="date-picker" onchange="renderDashboard()" class="border px-3 py-2 rounded-lg text-slate-700">
+                    
+                    <!-- ปุ่ม Export Excel -->
+                    <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-lg flex items-center gap-1.5 shadow transition">
+                        📊 Export Excel
+                    </button>
+
+                    <!-- ปุ่ม Reset ข้อมูลทั้งหมด -->
+                    <button onclick="resetAllData()" class="bg-rose-500 hover:bg-rose-600 text-white font-semibold px-4 py-2 rounded-lg flex items-center gap-1.5 shadow transition">
+                        🗑️ ล้างข้อมูลทั้งหมด
+                    </button>
+                </div>
+            </div>
+
+            <!-- การ์ดสรุปยอดขาย -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <p class="text-sm text-slate-500 font-medium">ยอดขายรวม</p>
+                    <h3 id="stat-revenue" class="text-2xl font-bold text-slate-800 mt-1">0 ฿</h3>
+                </div>
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <p class="text-sm text-slate-500 font-medium">จำนวนที่ขายได้</p>
+                    <h3 id="stat-cups" class="text-2xl font-bold text-indigo-600 mt-1">0 แก้ว</h3>
+                </div>
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <p class="text-sm text-slate-500 font-medium">ชำระด้วยเงินสด</p>
+                    <h3 id="stat-cash" class="text-2xl font-bold text-emerald-600 mt-1">0 ฿</h3>
+                </div>
+                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <p class="text-sm text-slate-500 font-medium">ชำระด้วยสแกน QR</p>
+                    <h3 id="stat-qr" class="text-2xl font-bold text-sky-600 mt-1">0 ฿</h3>
+                </div>
+            </div>
+
+            <!-- ตารางปฏิทินสรุปยอดขายรายวัน -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        📅 ปฏิทินสรุปจำนวนแก้วและยอดขายรายวัน
+                    </h3>
+                    <span id="calendar-month-year" class="text-sm font-semibold text-indigo-600"></span>
+                </div>
+                <!-- หัวตารางวัน -->
+                <div class="grid grid-cols-7 gap-1 text-center font-bold text-slate-500 text-sm mb-2">
+                    <div class="text-red-500 py-1">อา.</div>
+                    <div class="py-1">จ.</div>
+                    <div class="py-1">อ.</div>
+                    <div class="py-1">พ.</div>
+                    <div class="py-1">พฤ.</div>
+                    <div class="py-1">ศ.</div>
+                    <div class="text-indigo-500 py-1">ส.</div>
+                </div>
+                <!-- ตัวปฏิทิน -->
+                <div id="calendar-grid" class="grid grid-cols-7 gap-1 text-sm">
+                    <!-- ช่องวันที่ในปฏิทินจะแสดงที่นี่ -->
+                </div>
+            </div>
+
+            <!-- กราฟแสดงยอดขายแต่ละเมนู -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <h3 class="text-lg font-bold text-slate-800 mb-2">📊 กราฟเปรียบเทียบยอดขายแยกตามเมนู (จำนวนแก้ว)</h3>
+                <p class="text-xs text-slate-500 mb-4">*ใช้สำหรับวิเคราะห์เมนูที่ขายดีและเมนูที่ต้องทำโปรโมชั่นเพิ่มเติม</p>
+                <div class="w-full h-[320px]">
+                    <canvas id="salesChart"></canvas>
+                </div>
+            </div>
+
+            <!-- สรุปรายการเมนูผลไม้ที่ขายได้ พร้อมวันที่และเวลา -->
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                <h3 class="text-lg font-bold text-slate-800 mb-4">สรุปรายการขายแยกตามเมนูผลไม้ (พร้อม วันที่ / เวลา)</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b text-slate-400 text-sm">
+                                <th class="pb-3">วันที่ / เวลา</th>
+                                <th class="pb-3">ชื่อเมนู</th>
+                                <th class="pb-3 text-center">จำนวนขาย (แก้ว)</th>
+                                <th class="pb-3 text-right">ยอดขายรวม (บาท)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="summary-table-body" class="divide-y divide-slate-100 text-sm">
+                            <!-- รายงานสรุปผล -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- JavaScript -->
+    <script>
+        const menus = [
+            { id: 1, name: "สตรอว์เบอร์รีโยเกิร์ต", price: 50, emoji: "🍓" },
+            { id: 2, name: "มะม่วงน้ำดอกไม้", price: 45, emoji: "🥭" },
+            { id: 3, name: "แตงโมสดปั่น", price: 40, emoji: "🍉" },
+            { id: 4, name: "อะโวคาโดนมสด", price: 60, emoji: "🥑" },
+            { id: 5, name: "กล้วยหอมช็อกโกแลต", price: 45, emoji: "🍌" },
+            { id: 6, name: "ส้มคั้นสดปั่น", price: 40, emoji: "🍊" }
+        ];
+
+        let cart = [];
+        let selectedPayment = "เงินสด";
+        let activeFilter = "daily";
+        let myChart = null;
+        let currentFilteredSales = [];
+
+        function getLocalDateString(d) {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            renderMenu();
+            const datePicker = document.getElementById("date-picker");
+            if (datePicker) {
+                datePicker.value = getLocalDateString(new Date());
+            }
+            renderRecentOrders();
+            renderDashboard();
+        });
+
+        function switchTab(tab) {
+            document.getElementById("page-pos").classList.toggle("hidden", tab !== "pos");
+            document.getElementById("page-dashboard").classList.toggle("hidden", tab !== "dashboard");
+            document.getElementById("tab-pos").classList.toggle("active", tab === "pos");
+            document.getElementById("tab-dashboard").classList.toggle("active", tab === "dashboard");
+            
+            if (tab === "pos") renderRecentOrders();
+            if (tab === "dashboard") renderDashboard();
+        }
+
+        function renderMenu() {
+            const grid = document.getElementById("menu-grid");
+            if (!grid) return;
+            
+            grid.innerHTML = menus.map(item => `
+                <button onclick="addToCart(${item.id})" class="p-4 border rounded-2xl hover:border-indigo-500 hover:shadow-md transition text-center bg-slate-50">
+                    <div class="text-4xl mb-2">${item.emoji}</div>
+                    <div class="font-bold text-slate-800">${item.name}</div>
+                    <div class="text-indigo-600 font-semibold mt-1">${item.price} ฿</div>
+                </button>
+            `).join('');
+        }
+
+        function addToCart(menuId) {
+            const item = menus.find(m => m.id === menuId);
+            const existing = cart.find(c => c.id === menuId);
+            if (existing) {
+                existing.qty++;
+            } else {
+                cart.push({ ...item, qty: 1 });
+            }
+            renderCart();
+        }
+
+        function renderCart() {
+            const list = document.getElementById("cart-list");
+            if (cart.length === 0) {
+                list.innerHTML = `<p class="text-slate-400 text-center py-8">ยังไม่มีรายการในตะกร้า</p>`;
+                document.getElementById("cart-qty").innerText = `0 แก้ว`;
+                document.getElementById("cart-total").innerText = `0 ฿`;
+                return;
+            }
+
+            let totalQty = 0;
+            let totalPrice = 0;
+
+            list.innerHTML = cart.map(item => {
+                const itemTotal = item.price * item.qty;
+                totalQty += item.qty;
+                totalPrice += itemTotal;
+                return `
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <div>
+                            <div class="font-bold text-slate-800">${item.name}</div>
+                            <div class="text-xs text-slate-500">${item.price} ฿ x ${item.qty}</div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-indigo-600">${itemTotal} ฿</span>
+                            <button onclick="removeFromCart(${item.id})" class="text-red-500 font-bold px-2">×</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById("cart-qty").innerText = `${totalQty} แก้ว`;
+            document.getElementById("cart-total").innerText = `${totalPrice} ฿`;
+        }
+
+        function removeFromCart(id) {
+            cart = cart.filter(item => item.id !== id);
+            renderCart();
+        }
+
+        function setPaymentMethod(method) {
+            selectedPayment = method;
+            const isCash = method === "เงินสด";
+            document.getElementById("pay-cash").classList.toggle("selected", isCash);
+            document.getElementById("pay-qr").classList.toggle("selected", !isCash);
+
+            document.getElementById("icon-cash").classList.toggle("hidden", !isCash);
+            document.getElementById("icon-qr").classList.toggle("hidden", isCash);
+        }
+
+        function checkout() {
+            if (cart.length === 0) {
+                alert("กรุณาเลือกรายการสินค้าก่อนครับ");
+                return;
+            }
+
+            const now = new Date();
+            const order = {
+                id: Date.now(),
+                timestamp: now.getTime(),
+                dateStr: getLocalDateString(now),
+                items: [...cart],
+                totalQty: cart.reduce((sum, i) => sum + i.qty, 0),
+                totalPrice: cart.reduce((sum, i) => sum + (i.price * i.qty), 0),
+                paymentMethod: selectedPayment
+            };
+
+            const salesHistory = JSON.parse(localStorage.getItem("salesHistory") || "[]");
+            salesHistory.push(order);
+            localStorage.setItem("salesHistory", JSON.stringify(salesHistory));
+
+            alert("บันทึกการขายสำเร็จ!");
+            cart = [];
+            renderCart();
+            renderRecentOrders();
+        }
+
+        function renderRecentOrders() {
+            const tbody = document.getElementById("recent-orders-body");
+            if (!tbody) return;
+
+            const salesHistory = JSON.parse(localStorage.getItem("salesHistory") || "[]");
+            
+            if (salesHistory.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-6 text-slate-400">ยังไม่มีประวัติการชำระเงิน</td></tr>`;
+                return;
+            }
+
+            const recentOrders = [...salesHistory].reverse().slice(0, 5);
+
+            tbody.innerHTML = recentOrders.map(order => {
+                const itemList = order.items.map(i => `${i.name} x${i.qty}`).join(', ');
+                const badgeColor = order.paymentMethod === 'เงินสด' ? 'bg-emerald-100 text-emerald-700' : 'bg-sky-100 text-sky-700';
+                
+                const orderDate = order.timestamp ? new Date(order.timestamp) : new Date(order.date);
+                
+                const formattedDate = orderDate.toLocaleDateString('th-TH', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+                const formattedTime = orderDate.toLocaleTimeString('th-TH', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                const fullDateTimeStr = `${formattedDate} ${formattedTime} น.`;
+
+                return `
+                    <tr class="hover:bg-slate-50">
+                        <td class="py-3 text-slate-600 font-medium">${fullDateTimeStr}</td>
+                        <td class="py-3 font-medium text-slate-800">${itemList}</td>
+                        <td class="py-3 text-center">
+                            <span class="px-2 py-1 rounded-md text-xs font-semibold ${badgeColor}">
+                                ${order.paymentMethod}
+                            </span>
+                        </td>
+                        <td class="py-3 text-center text-slate-600">${order.totalQty} แก้ว</td>
+                        <td class="py-3 text-right font-bold text-indigo-600">${order.totalPrice.toLocaleString()} ฿</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterSummary(type) {
+            activeFilter = type;
+            ["daily", "monthly", "yearly"].forEach(t => {
+                const btn = document.getElementById(`btn-${t}`);
+                if (btn) {
+                    btn.className = t === type 
+                        ? "filter-btn bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium"
+                        : "filter-btn bg-slate-200 text-slate-700 px-4 py-2 rounded-lg font-medium";
+                }
+            });
+            renderDashboard();
+        }
+
+        function renderDashboard() {
+            const salesHistory = JSON.parse(localStorage.getItem("salesHistory") || "[]");
+            const datePicker = document.getElementById("date-picker");
+            if (!datePicker || !datePicker.value) return;
+
+            const selectedDateStr = datePicker.value;
+            const [selYear, selMonth] = selectedDateStr.split('-').map(Number);
+
+            currentFilteredSales = salesHistory.filter(order => {
+                let orderDate = order.timestamp ? new Date(order.timestamp) : new Date(order.date);
+
+                const oYear = orderDate.getFullYear();
+                const oMonth = orderDate.getMonth() + 1;
+
+                if (activeFilter === "daily") {
+                    const orderDateStr = order.dateStr || getLocalDateString(orderDate);
+                    return orderDateStr === selectedDateStr;
+                } else if (activeFilter === "monthly") {
+                    return oMonth === selMonth && oYear === selYear;
+                } else if (activeFilter === "yearly") {
+                    return oYear === selYear;
+                }
+            });
+
+            let totalRevenue = 0;
+            let totalCups = 0;
+            let cashTotal = 0;
+            let qrTotal = 0;
+            
+            const detailList = [];
+            const menuStats = {};
+            menus.forEach(m => menuStats[m.name] = 0);
+
+            currentFilteredSales.forEach(order => {
+                totalRevenue += order.totalPrice;
+                totalCups += order.totalQty;
+                if (order.paymentMethod === "เงินสด") cashTotal += order.totalPrice;
+                if (order.paymentMethod === "สแกน QR") qrTotal += order.totalPrice;
+
+                const orderDate = order.timestamp ? new Date(order.timestamp) : new Date(order.date);
+                const formattedDate = orderDate.toLocaleDateString('th-TH', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+                const formattedTime = orderDate.toLocaleTimeString('th-TH', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                order.items.forEach(item => {
+                    menuStats[item.name] = (menuStats[item.name] || 0) + item.qty;
+                    detailList.push({
+                        dateTime: `${formattedDate} ${formattedTime} น.`,
+                        name: item.name,
+                        qty: item.qty,
+                        total: item.price * item.qty
+                    });
+                });
+            });
+
+            document.getElementById("stat-revenue").innerText = `${totalRevenue.toLocaleString()} ฿`;
+            document.getElementById("stat-cups").innerText = `${totalCups.toLocaleString()} แก้ว`;
+            document.getElementById("stat-cash").innerText = `${cashTotal.toLocaleString()} ฿`;
+            document.getElementById("stat-qr").innerText = `${qrTotal.toLocaleString()} ฿`;
+
+            const tbody = document.getElementById("summary-table-body");
+            if (tbody) {
+                if (detailList.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400">ไม่มีข้อมูลการขายในช่วงเวลานี้</td></tr>`;
+                } else {
+                    tbody.innerHTML = detailList.map(item => `
+                        <tr class="hover:bg-slate-50">
+                            <td class="py-3 text-slate-600 font-medium">${item.dateTime}</td>
+                            <td class="py-3 font-semibold text-slate-700">${item.name}</td>
+                            <td class="py-3 text-center text-slate-600">${item.qty} แก้ว</td>
+                            <td class="py-3 text-right font-bold text-indigo-600">${item.total.toLocaleString()} ฿</td>
+                        </tr>
+                    `).join('');
+                }
+            }
+
+            renderCalendar(selYear, selMonth, selectedDateStr, salesHistory);
+            renderChart(menuStats);
+        }
+
+        // ฟังก์ชันวาดปฏิทินแสดงยอดขายประจำเดือน
+        function renderCalendar(year, month, selectedDateStr, salesHistory) {
+            const calendarGrid = document.getElementById("calendar-grid");
+            const calendarMonthYear = document.getElementById("calendar-month-year");
+            if (!calendarGrid) return;
+
+            const firstDay = new Date(year, month - 1, 1).getDay();
+            const daysInMonth = new Date(year, month, 0).getDate();
+
+            const dateNames = new Date(year, month - 1, 1).toLocaleDateString('th-TH', { month: 'long', year: 'numeric' });
+            calendarMonthYear.innerText = dateNames;
+
+            // คำนวณยอดขายแต่ละวัน
+            const dailyStats = {};
+            salesHistory.forEach(order => {
+                const orderDate = order.timestamp ? new Date(order.timestamp) : new Date(order.date);
+                const oYear = orderDate.getFullYear();
+                const oMonth = orderDate.getMonth() + 1;
+                
+                if (oYear === year && oMonth === month) {
+                    const dayNum = orderDate.getDate();
+                    if (!dailyStats[dayNum]) {
+                        dailyStats[dayNum] = { cups: 0, revenue: 0 };
+                    }
+                    dailyStats[dayNum].cups += order.totalQty;
+                    dailyStats[dayNum].revenue += order.totalPrice;
+                }
+            });
+
+            let calendarHTML = "";
+
+            // เติมช่องว่างด้านหน้าวันแรกของเดือน
+            for (let i = 0; i < firstDay; i++) {
+                calendarHTML += `<div class="p-2 bg-slate-50 rounded-xl min-h-[70px] border border-slate-100 opacity-40"></div>`;
+            }
+
+            // สร้างช่องวันที่
+            for (let day = 1; day <= daysInMonth; day++) {
+                const formattedDay = String(day).padStart(2, '0');
+                const formattedMonth = String(month).padStart(2, '0');
+                const currentDateStr = `${year}-${formattedMonth}-${formattedDay}`;
+
+                const isSelected = currentDateStr === selectedDateStr;
+                const stats = dailyStats[day];
+
+                const borderClass = isSelected ? "border-2 border-indigo-600 bg-indigo-50/40 shadow-sm" : "border border-slate-200 bg-white hover:border-indigo-300";
+
+                calendarHTML += `
+                    <div onclick="selectDateFromCalendar('${currentDateStr}')" class="p-2 rounded-xl min-h-[75px] cursor-pointer transition flex flex-col justify-between ${borderClass}">
+                        <div class="flex justify-between items-center">
+                            <span class="font-bold text-xs ${isSelected ? 'text-indigo-600' : 'text-slate-700'}">${day}</span>
+                            ${stats ? `<span class="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full font-bold">${stats.cups} แก้ว</span>` : ''}
+                        </div>
+                        <div class="text-right mt-1">
+                            ${stats ? `<p class="text-xs font-bold text-emerald-600">${stats.revenue.toLocaleString()} ฿</p>` : `<p class="text-[11px] text-slate-300">-</p>`}
+                        </div>
+                    </div>
+                `;
+            }
+
+            calendarGrid.innerHTML = calendarHTML;
+        }
+
+        function selectDateFromCalendar(dateStr) {
+            document.getElementById("date-picker").value = dateStr;
+            activeFilter = "daily";
+            filterSummary('daily');
+        }
+
+        function renderChart(menuStats) {
+            const ctx = document.getElementById('salesChart');
+            if (!ctx) return;
+
+            const labels = Object.keys(menuStats);
+            const dataValues = Object.values(menuStats);
+
+            if (myChart) {
+                myChart.destroy();
+            }
+
+            myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'จำนวนที่ขายได้ (แก้ว)',
+                        data: dataValues,
+                        backgroundColor: [
+                            'rgba(244, 63, 94, 0.75)',
+                            'rgba(245, 158, 11, 0.75)',
+                            'rgba(239, 68, 68, 0.75)',
+                            'rgba(16, 185, 129, 0.75)',
+                            'rgba(217, 119, 6, 0.75)',
+                            'rgba(249, 115, 22, 0.75)'
+                        ],
+                        borderColor: [
+                            'rgb(244, 63, 94)',
+                            'rgb(245, 158, 11)',
+                            'rgb(239, 68, 68)',
+                            'rgb(16, 185, 129)',
+                            'rgb(217, 119, 6)',
+                            'rgb(249, 115, 22)'
+                        ],
+                        borderWidth: 1.5,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { stepSize: 1 }
+                        }
+                    }
+                }
+            });
+        }
+
+        function exportToExcel() {
+            if (!currentFilteredSales || currentFilteredSales.length === 0) {
+                alert("ไม่มีข้อมูลการขายในช่วงเวลานี้สำหรับการ Export ครับ");
+                return;
+            }
+
+            const excelData = [];
+
+            currentFilteredSales.forEach(order => {
+                const orderDate = order.timestamp ? new Date(order.timestamp) : new Date(order.date);
+                const formattedDate = orderDate.toLocaleDateString('th-TH', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric'
+                });
+                const formattedTime = orderDate.toLocaleTimeString('th-TH', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+
+                order.items.forEach(item => {
+                    excelData.push({
+                        "วันที่": formattedDate,
+                        "เวลา": `${formattedTime} น.`,
+                        "ชื่อเมนู": item.name,
+                        "ราคาต่อแก้ว (บาท)": item.price,
+                        "จำนวน (แก้ว)": item.qty,
+                        "ยอดขายรวม (บาท)": item.price * item.qty,
+                        "วิธีชำระเงิน": order.paymentMethod
+                    });
+                });
+            });
+
+            const worksheet = XLSX.utils.json_to_sheet(excelData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "รายงานยอดขาย");
+
+            const dateStr = document.getElementById("date-picker").value || getLocalDateString(new Date());
+            const fileName = `รายงานยอดขาย_MR_CHO_${activeFilter}_${dateStr}.xlsx`;
+
+            XLSX.writeFile(workbook, fileName);
+        }
+
+        function resetAllData() {
+            const confirmReset = confirm("⚠️ คุณแน่ใจหรือไม่ที่จะล้างข้อมูลการขายทั้งหมด?\n\nการดำเนินการนี้จะลบประวัติการขายทั้งหมดออกจากระบบและไม่สามารถกู้คืนได้!");
+            if (confirmReset) {
+                localStorage.removeItem("salesHistory");
+                cart = [];
+                renderCart();
+                renderRecentOrders();
+                renderDashboard();
+                alert("ล้างข้อมูลการขายทั้งหมดเรียบร้อยแล้วครับ");
+            }
+        }
+    </script>
+</body>
+</html>
