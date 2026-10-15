@@ -72,7 +72,7 @@
                             + เพิ่มเมนู
                         </button>
                     </div>
-                    <div id="menu-grid" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-3">
+                    <div id="menu-grid" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
                         <!-- เมนูจะแสดงที่นี่ -->
                     </div>
                 </div>
@@ -199,14 +199,17 @@
 
     <!-- Popup เพิ่มเมนูใหม่ -->
     <div id="add-menu-modal" class="hidden fixed inset-0 z-50 bg-slate-900/45 flex items-center justify-center p-4" onclick="if(event.target===this) closeAddMenuModal()">
-        <div class="modal-panel bg-white rounded-xl shadow-xl w-full max-w-sm p-6" role="dialog" aria-modal="true" aria-labelledby="add-menu-title">
+        <div class="modal-panel bg-white rounded-xl shadow-xl w-full max-w-sm p-6 max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="add-menu-title">
             <h3 id="add-menu-title" class="text-lg font-semibold text-slate-900">เพิ่มเมนูใหม่</h3>
 
-            <label for="new-menu-name" class="block text-sm font-medium text-slate-700 mt-5 mb-1.5">ชื่อเมนู</label>
-            <input id="new-menu-name" type="text" maxlength="60" autocomplete="off" placeholder="เช่น มะม่วงน้ำปลาหวานปั่น" onkeydown="if(event.key==='Enter') saveNewMenu()" class="w-full bg-white border border-slate-300 px-3 py-2.5 rounded-lg text-slate-900">
+            <label for="new-menu-name" class="block text-sm font-medium text-slate-700 mt-4 mb-1.5">ชื่อเมนู</label>
+            <input id="new-menu-name" type="text" maxlength="60" autocomplete="off" placeholder="เช่น มะม่วงน้ำปลาหวานปั่น" class="w-full bg-white border border-slate-300 px-3 py-2.5 rounded-lg text-slate-900">
 
             <label for="new-menu-price" class="block text-sm font-medium text-slate-700 mt-4 mb-1.5">ราคา (บาท)</label>
-            <input id="new-menu-price" type="number" inputmode="numeric" min="1" step="1" placeholder="เช่น 65" onkeydown="if(event.key==='Enter') saveNewMenu()" class="w-full bg-white border border-slate-300 px-3 py-2.5 rounded-lg text-slate-900 num">
+            <input id="new-menu-price" type="number" inputmode="numeric" min="1" step="1" placeholder="เช่น 65" class="w-full bg-white border border-slate-300 px-3 py-2.5 rounded-lg text-slate-900 num">
+
+            <label class="block text-sm font-medium text-slate-700 mt-4 mb-1.5">อัพโหลดรูปภาพเมนู</label>
+            <input id="new-menu-file" type="file" accept="image/*" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-150 cursor-pointer">
 
             <p id="add-menu-error" class="hidden text-sm text-rose-600 mt-3"></p>
 
@@ -219,16 +222,25 @@
 
     <!-- Popup แก้ไขเมนู -->
     <div id="edit-menu-modal" class="hidden fixed inset-0 z-50 bg-slate-900/45 flex items-center justify-center p-4" onclick="if(event.target===this) closeEditMenuModal()">
-        <div class="modal-panel bg-white rounded-xl shadow-xl w-full max-w-sm p-6" role="dialog" aria-modal="true" aria-labelledby="edit-menu-title">
+        <div class="modal-panel bg-white rounded-xl shadow-xl w-full max-w-sm p-6 max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="edit-menu-title">
             <h3 id="edit-menu-title" class="text-lg font-semibold text-slate-900">แก้ไขข้อมูลเมนู</h3>
 
             <input type="hidden" id="edit-menu-id">
 
-            <label for="edit-menu-name" class="block text-sm font-medium text-slate-700 mt-5 mb-1.5">ชื่อเมนู</label>
-            <input id="edit-menu-name" type="text" maxlength="60" autocomplete="off" onkeydown="if(event.key==='Enter') saveEditedMenu()" class="w-full bg-white border border-slate-300 px-3 py-2.5 rounded-lg text-slate-900">
+            <label for="edit-menu-name" class="block text-sm font-medium text-slate-700 mt-4 mb-1.5">ชื่อเมนู</label>
+            <input id="edit-menu-name" type="text" maxlength="60" autocomplete="off" class="w-full bg-white border border-slate-300 px-3 py-2.5 rounded-lg text-slate-900">
 
             <label for="edit-menu-price" class="block text-sm font-medium text-slate-700 mt-4 mb-1.5">ราคา (บาท)</label>
-            <input id="edit-menu-price" type="number" inputmode="numeric" min="1" step="1" onkeydown="if(event.key==='Enter') saveEditedMenu()" class="w-full bg-white border border-slate-300 px-3 py-2.5 rounded-lg text-slate-900 num">
+            <input id="edit-menu-price" type="number" inputmode="numeric" min="1" step="1" class="w-full bg-white border border-slate-300 px-3 py-2.5 rounded-lg text-slate-900 num">
+
+            <label class="block text-sm font-medium text-slate-700 mt-4 mb-1.5">เปลี่ยนรูปภาพเมนู (ถ้าต้องการ)</label>
+            <div class="space-y-2">
+                <input id="edit-menu-file" type="file" accept="image/*" class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-150 cursor-pointer">
+                <div id="edit-menu-current-img-container" class="hidden flex items-center justify-between bg-slate-50 p-2 rounded-lg border border-slate-200">
+                    <span class="text-xs text-slate-600 truncate max-w-[200px]">มีรูปภาพปัจจุบันแล้ว</span>
+                    <button type="button" onclick="clearExistingMenuImage()" class="text-xs text-rose-600 hover:underline font-medium px-2 py-1">ลบรูปภาพออก</button>
+                </div>
+            </div>
 
             <p id="edit-menu-error" class="hidden text-sm text-rose-600 mt-3"></p>
 
@@ -258,38 +270,37 @@
     <!-- JavaScript -->
     <script>
         const defaultMenus = [
-            { id: 1, name: "สตรอว์เบอร์รีโยเกิร์ต", price: 50, emoji: "🍓" },
-            { id: 2, name: "มะม่วงน้ำดอกไม้", price: 45, emoji: "🥭" },
-            { id: 3, name: "แตงโมสดปั่น", price: 40, emoji: "🍉" },
-            { id: 4, name: "อะโวคาโดนมสด", price: 60, emoji: "🥑" },
-            { id: 5, name: "กล้วยหอมช็อกโกแลต", price: 45, emoji: "🍌" },
-            { id: 6, name: "ส้มคั้นสดปั่น", price: 40, emoji: "🍊" },
-            { id: 7, name: "มะพร้าวปั่น", price: 50, emoji: "🥥" },
-            { id: 8, name: "อาโวคาโดปั่น", price: 75, emoji: "🥑" },
-            { id: 9, name: "อาโวคาโดมะพร้าวปั่น", price: 85, emoji: "🥑" },
-            { id: 10, name: "อาโวคาโดกล้วยหอมปั่น", price: 85, emoji: "🍌" },
-            { id: 11, name: "กล้วยหอมนมสดปั่น", price: 60, emoji: "🍌" },
-            { id: 12, name: "กล้วยช็อกโกแลตนมสดปั่น", price: 65, emoji: "🍫" },
-            { id: 13, name: "คาราเมลนมสดปั่น", price: 50, emoji: "🍮" },
-            { id: 14, name: "แตงโมปั่น", price: 50, emoji: "🍉" },
-            { id: 15, name: "แตงโมลิ้นจี่ปั่น", price: 75, emoji: "🍉" },
-            { id: 16, name: "สตรอว์เบอร์รีปั่น", price: 65, emoji: "🍓" },
-            { id: 17, name: "สตรอว์เบอร์รีพริกเกลือปั่น", price: 75, emoji: "🍓" },
-            { id: 18, name: "สตรอว์เบอร์รีกล้วยหอมปั่น", price: 65, emoji: "🍓" },
-            { id: 19, name: "มิกซ์เบอร์รี่", price: 75, emoji: "🍇" },
-            { id: 20, name: "บลูเบอร์รี", price: 85, emoji: "🫐" },
-            { id: 21, name: "ลูกพรุน", price: 85, emoji: "🍑" },
-            { id: 22, name: "ลิ้นจี่", price: 75, emoji: "🍒" },
-            { id: 23, name: "โกโก้ปั่น", price: 50, emoji: "🍫" },
-            { id: 24, name: "โกโก้โอริโอ้", price: 65, emoji: "🍪" },
-            { id: 25, name: "ส้มแมนดาลีนสดปั่น", price: 65, emoji: "🍊" },
-            { id: 26, name: "ส้มแมนดาลีนพริกเกลือ", price: 75, emoji: "🍊" },
-            { id: 27, name: "มะม่วงปั่น", price: 60, emoji: "🥭" },
-            { id: 28, name: "สัปปะรดปั่น", price: 50, emoji: "🍍" },
-            { id: 29, name: "สัปปะรดพริกเกลือ", price: 60, emoji: "🍍" }
+            { id: 1, name: "สตรอว์เบอร์รีโยเกิร์ต", price: 50, image: "" },
+            { id: 2, name: "มะม่วงน้ำดอกไม้", price: 45, image: "" },
+            { id: 3, name: "แตงโมสดปั่น", price: 40, image: "" },
+            { id: 4, name: "อะโวคาโดนมสด", price: 60, image: "" },
+            { id: 5, name: "กล้วยหอมช็อกโกแลต", price: 45, image: "" },
+            { id: 6, name: "ส้มคั้นสดปั่น", price: 40, image: "" },
+            { id: 7, name: "มะพร้าวปั่น", price: 50, image: "" },
+            { id: 8, name: "อาโวคาโดปั่น", price: 75, image: "" },
+            { id: 9, name: "อาโวคาโดมะพร้าวปั่น", price: 85, image: "" },
+            { id: 10, name: "อาโวคาโดกล้วยหอมปั่น", price: 85, image: "" },
+            { id: 11, name: "กล้วยหอมนมสดปั่น", price: 60, image: "" },
+            { id: 12, name: "กล้วยช็อกโกแลตนมสดปั่น", price: 65, image: "" },
+            { id: 13, name: "คาราเมลนมสดปั่น", price: 50, image: "" },
+            { id: 14, name: "แตงโมปั่น", price: 50, image: "" },
+            { id: 15, name: "แตงโมลิ้นจี่ปั่น", price: 75, image: "" },
+            { id: 16, name: "สตรอว์เบอร์รีปั่น", price: 65, image: "" },
+            { id: 17, name: "สตรอว์เบอร์รีพริกเกลือปั่น", price: 75, image: "" },
+            { id: 18, name: "สตรอว์เบอร์รีกล้วยหอมปั่น", price: 65, image: "" },
+            { id: 19, name: "มิกซ์เบอร์รี่", price: 75, image: "" },
+            { id: 20, name: "บลูเบอร์รี", price: 85, image: "" },
+            { id: 21, name: "ลูกพรุน", price: 85, image: "" },
+            { id: 22, name: "ลิ้นจี่", price: 75, image: "" },
+            { id: 23, name: "โกโก้ปั่น", price: 50, image: "" },
+            { id: 24, name: "โกโก้โอริโอ้", price: 65, image: "" },
+            { id: 25, name: "ส้มแมนดาลีนสดปั่น", price: 65, image: "" },
+            { id: 26, name: "ส้มแมนดาลีนพริกเกลือ", price: 75, image: "" },
+            { id: 27, name: "มะม่วงปั่น", price: 60, image: "" },
+            { id: 28, name: "สัปปะรดปั่น", price: 50, image: "" },
+            { id: 29, name: "สัปปะรดพริกเกลือ", price: 60, image: "" }
         ];
 
-        // เมนูที่เพิ่มเองหรือแก้ไขเก็บไว้ในเครื่อง (localStorage)
         function loadCustomMenus() {
             try {
                 const list = JSON.parse(localStorage.getItem("customMenus") || "[]");
@@ -299,11 +310,10 @@
             }
         }
         function saveCustomMenus() {
-            const list = menus.filter(m => m.custom).map(({ id, name, price }) => ({ id, name, price }));
+            const list = menus.filter(m => m.custom).map(({ id, name, price, image }) => ({ id, name, price, image }));
             localStorage.setItem("customMenus", JSON.stringify(list));
         }
 
-        // โหลดข้อมูลเมนูที่เคยถูกแก้ไขทับไว้ (Edited Menus)
         function loadEditedMenus() {
             try {
                 return JSON.parse(localStorage.getItem("editedMenus") || "{}");
@@ -316,7 +326,6 @@
         }
 
         let editedMenusMap = loadEditedMenus();
-        // ผสานข้อมูลเมนูเริ่มต้นกับที่แก้ไขแล้ว และเมนูที่เพิ่มเอง
         let menus = defaultMenus.map(m => {
             if (editedMenusMap[m.id]) {
                 return { ...m, ...editedMenusMap[m.id] };
@@ -325,12 +334,12 @@
         }).concat(loadCustomMenus());
 
         let pendingMenuId = null;
-
         let cart = [];
         let selectedPayment = "เงินสด";
         let activeFilter = "daily";
         let myChart = null;
         let currentFilteredSales = [];
+        let shouldClearImage = false; // ตัวแปรสถานะสำหรับลบรูปภาพ
 
         function getLocalDateString(d) {
             const year = d.getFullYear();
@@ -360,23 +369,35 @@
             const grid = document.getElementById("menu-grid");
             if (!grid) return;
 
-            grid.innerHTML = menus.map(item => `
-                <div class="relative">
-                    <button onclick="openSweetModal(${item.id})" class="w-full h-full text-left p-4 pr-16 bg-white border border-slate-200 rounded-lg hover:border-brand-600 hover:bg-brand-50 transition flex flex-col justify-between gap-3 min-h-[92px]">
-                        <span class="font-medium text-slate-900 leading-snug">${item.name}</span>
-                        <span class="text-sm font-semibold text-brand-700 num">${item.price} ฿</span>
-                    </button>
-                    <!-- ปุ่มแก้ไขเมนู (รูปดินสอ) -->
-                    <button onclick="openEditMenuModal(${item.id})" class="absolute top-2 right-9 text-xs text-slate-400 hover:text-brand-700 px-1 py-0.5 transition" title="แก้ไขเมนู">แก้ไข</button>
-                    <!-- ปุ่มลบ (เฉพาะเมนูที่เพิ่มเอง) -->
-                    ${item.custom ? `<button onclick="removeCustomMenu(\${item.id})" class="absolute top-2 right-2 text-xs text-slate-400 hover:text-rose-600 px-1.5 py-0.5 transition" title="ลบเมนู">ลบ</button>` : ''}
-                </div>
-            `).join('');
+            grid.innerHTML = menus.map(item => {
+                const imageHtml = item.image 
+                    ? `<img src="${item.image}" alt="${item.name}" class="w-full h-28 object-cover rounded-md mb-2 bg-slate-100">` 
+                    : `<div class="w-full h-28 flex items-center justify-center text-slate-300 text-xs bg-slate-50 rounded-md mb-2 border border-dashed border-slate-200">ไม่มีรูปภาพ</div>`;
+
+                return `
+                    <div class="relative bg-white border border-slate-200 rounded-lg p-3 hover:border-brand-600 hover:bg-brand-50 transition flex flex-col justify-between">
+                        <!-- ปุ่มแก้ไข & ลบ -->
+                        <div class="absolute top-2 right-2 flex gap-1 z-10 bg-white/80 backdrop-blur-xs px-1 rounded shadow-xs">
+                            <button onclick="openEditMenuModal(${item.id})" class="text-[11px] text-slate-500 hover:text-brand-700 px-1 py-0.5" title="แก้ไขเมนู">แก้ไข</button>
+                            ${item.custom ? `<button onclick="removeCustomMenu(\${item.id})" class="text-[11px] text-slate-400 hover:text-rose-600 px-1 py-0.5" title="ลบเมนู">ลบ</button>` : ''}
+                        </div>
+
+                        <button onclick="openSweetModal(${item.id})" class="w-full text-left flex flex-col justify-between h-full">
+                            <div>
+                                ${imageHtml}
+                                <span class="font-medium text-slate-900 text-sm line-clamp-2 leading-snug mt-1">${item.name}</span>
+                            </div>
+                            <span class="text-sm font-semibold text-brand-700 num mt-2">${item.price} ฿</span>
+                        </button>
+                    </div>
+                `;
+            }).join('');
         }
 
         function openAddMenuModal() {
             document.getElementById("new-menu-name").value = "";
             document.getElementById("new-menu-price").value = "";
+            document.getElementById("new-menu-file").value = "";
             document.getElementById("add-menu-error").classList.add("hidden");
             document.getElementById("add-menu-modal").classList.remove("hidden");
             document.getElementById("new-menu-name").focus();
@@ -395,30 +416,59 @@
         function saveNewMenu() {
             const name = document.getElementById("new-menu-name").value.trim().replace(/\s+/g, ' ');
             const price = Number(document.getElementById("new-menu-price").value);
+            const fileInput = document.getElementById("new-menu-file");
 
             if (!name) return showAddMenuError("กรุณากรอกชื่อเมนู");
             if (/[<>"&]/.test(name)) return showAddMenuError("ชื่อเมนูห้ามมีอักขระ < > \" &");
             if (!Number.isFinite(price) || price <= 0) return showAddMenuError("กรุณากรอกราคาเป็นตัวเลขที่มากกว่า 0");
             if (menus.some(m => m.name.toLowerCase() === name.toLowerCase())) return showAddMenuError("มีเมนูชื่อนี้อยู่แล้ว");
 
-            const nextId = Math.max(1000, ...menus.map(m => m.id)) + 1;
-            menus.push({ id: nextId, name, price: Math.round(price), custom: true });
-            saveCustomMenus();
-            renderMenu();
-            closeAddMenuModal();
+            if (fileInput.files && fileInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const image = e.target.result;
+                    const nextId = Math.max(1000, ...menus.map(m => m.id)) + 1;
+                    menus.push({ id: nextId, name, price: Math.round(price), image, custom: true });
+                    saveCustomMenus();
+                    renderMenu();
+                    closeAddMenuModal();
+                };
+                reader.readAsDataURL(fileInput.files[0]);
+            } else {
+                const nextId = Math.max(1000, ...menus.map(m => m.id)) + 1;
+                menus.push({ id: nextId, name, price: Math.round(price), image: "", custom: true });
+                saveCustomMenus();
+                renderMenu();
+                closeAddMenuModal();
+            }
         }
 
-        // ฟังก์ชันเปิด Popup แก้ไขเมนู
         function openEditMenuModal(id) {
             const item = menus.find(m => m.id === id);
             if (!item) return;
 
+            shouldClearImage = false;
             document.getElementById("edit-menu-id").value = item.id;
             document.getElementById("edit-menu-name").value = item.name;
             document.getElementById("edit-menu-price").value = item.price;
+            document.getElementById("edit-menu-file").value = "";
+
+            const imgContainer = document.getElementById("edit-menu-current-img-container");
+            if (item.image) {
+                imgContainer.classList.remove("hidden");
+            } else {
+                imgContainer.classList.add("hidden");
+            }
+
             document.getElementById("edit-menu-error").classList.add("hidden");
             document.getElementById("edit-menu-modal").classList.remove("hidden");
             document.getElementById("edit-menu-name").focus();
+        }
+
+        function clearExistingMenuImage() {
+            shouldClearImage = true;
+            document.getElementById("edit-menu-file").value = "";
+            document.getElementById("edit-menu-current-img-container").classList.add("hidden");
         }
 
         function closeEditMenuModal() {
@@ -431,11 +481,11 @@
             el.classList.remove("hidden");
         }
 
-        // ฟังก์ชันบันทึกข้อมูลเมนูที่แก้ไข
         function saveEditedMenu() {
             const id = Number(document.getElementById("edit-menu-id").value);
             const name = document.getElementById("edit-menu-name").value.trim().replace(/\s+/g, ' ');
             const price = Number(document.getElementById("edit-menu-price").value);
+            const fileInput = document.getElementById("edit-menu-file");
 
             if (!name) return showEditMenuError("กรุณากรอกชื่อเมนู");
             if (/[<>"&]/.test(name)) return showEditMenuError("ชื่อเมนูห้ามมีอักขระ < > \" &");
@@ -448,15 +498,31 @@
             item.name = name;
             item.price = Math.round(price);
 
-            if (item.custom) {
-                saveCustomMenus();
-            } else {
-                editedMenusMap[id] = { name: item.name, price: item.price };
-                saveEditedMenus();
+            if (shouldClearImage) {
+                item.image = "";
             }
 
-            renderMenu();
-            closeEditMenuModal();
+            const updateAndSave = (imageVal) => {
+                if (imageVal !== undefined) item.image = imageVal;
+                if (item.custom) {
+                    saveCustomMenus();
+                } else {
+                    editedMenusMap[id] = { name: item.name, price: item.price, image: item.image };
+                    saveEditedMenus();
+                }
+                renderMenu();
+                closeEditMenuModal();
+            };
+
+            if (fileInput.files && fileInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    updateAndSave(e.target.result);
+                };
+                reader.readAsDataURL(fileInput.files[0]);
+            } else {
+                updateAndSave();
+            }
         }
 
         function removeCustomMenu(id) {
@@ -631,7 +697,7 @@
             }).join('');
         }
 
-        // ================= Dashboard: แยกหน้ารายวัน / รายเดือน / รายปี =================
+        // ================= Dashboard =================
         const pad = n => String(n).padStart(2, '0');
         const charts = {};
         let selectedDate = "";
@@ -889,11 +955,6 @@
                 daily[d].revenue += o.totalPrice;
             });
 
-            let bestDay = 0;
-            Object.keys(daily).forEach(d => {
-                if (!bestDay || daily[d].revenue > daily[bestDay].revenue) bestDay = Number(d);
-            });
-
             let cells = "";
             for (let i = 0; i < firstDay; i++) {
                 cells += `<div class="p-2 bg-slate-50 rounded-lg min-h-[70px] border border-slate-100 opacity-40"></div>`;
@@ -901,7 +962,7 @@
             for (let day = 1; day <= daysInMonth; day++) {
                 const dateStr = `${key}-${pad(day)}`;
                 const st = daily[day];
-                const highlight = selectedDateStr ? dateStr === selectedDateStr : day === bestDay;
+                const highlight = selectedDateStr ? dateStr === selectedDateStr : false;
                 const cls = highlight
                     ? "border border-brand-600 bg-brand-50 ring-1 ring-brand-600"
                     : "border border-slate-200 bg-white hover:border-brand-400";
@@ -916,10 +977,6 @@
                         </div>
                     </button>`;
             }
-            const bestText = bestDay ? ` วันที่ขายสูงสุดของเดือนคือวันที่ ${bestDay} (${fmt(daily[bestDay].revenue)} ฿)` : '';
-            const bestNote = selectedDateStr
-                ? `กดที่วันเพื่อเปลี่ยนวันที่ดู วันที่เลือกอยู่จะมีกรอบสีเขียว.${bestText}`
-                : `กดที่วันเพื่อดูรายละเอียดของวันนั้น.${bestText}`;
             const monthLabel = new Date(y, m - 1, 1).toLocaleDateString('th-TH', { month: 'long', year: 'numeric' });
             const monthNav = selectedDateStr ? `
                 <div class="flex items-center gap-1 shrink-0">
@@ -931,7 +988,6 @@
                     <div class="flex justify-between items-start gap-3 mb-4">
                         <div>
                             <h3 class="text-base font-semibold text-slate-900">ปฏิทิน${selectedDateStr ? ' ' + monthLabel : 'ยอดขายรายวันในเดือน'}</h3>
-                            <p class="text-sm text-slate-500 mt-1">${bestNote.replace('.', ' ')}</p>
                         </div>
                         ${monthNav}
                     </div>
@@ -985,7 +1041,6 @@
 
         function renderDashboard() {
             const type = activeFilter;
-
             Object.keys(charts).forEach(id => { charts[id].destroy(); delete charts[id]; });
 
             const dp = document.getElementById("date-picker");
@@ -1112,18 +1167,10 @@
             }
 
             const excelData = [];
-
             currentFilteredSales.forEach(order => {
                 const orderDate = order.timestamp ? new Date(order.timestamp) : new Date(order.date);
-                const formattedDate = orderDate.toLocaleDateString('th-TH', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric'
-                });
-                const formattedTime = orderDate.toLocaleTimeString('th-TH', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
+                const formattedDate = orderDate.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                const formattedTime = orderDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
 
                 order.items.forEach(item => {
                     excelData.push({
@@ -1144,14 +1191,11 @@
             XLSX.utils.book_append_sheet(workbook, worksheet, "รายงานยอดขาย");
 
             const dateStr = currentKey(activeFilter);
-            const fileName = `รายงานยอดขาย_MR_CHO_HOUSE_${activeFilter}_${dateStr}.xlsx`;
-
-            XLSX.writeFile(workbook, fileName);
+            XLSX.writeFile(workbook, `รายงานยอดขาย_MR_CHO_HOUSE_${activeFilter}_${dateStr}.xlsx`);
         }
 
         function resetAllData() {
-            const confirmReset = confirm("คุณแน่ใจหรือไม่ที่จะล้างข้อมูลการขายทั้งหมด?\n\nการดำเนินการนี้จะลบประวัติการขายทั้งหมดออกจากระบบและไม่สามารถกู้คืนได้!");
-            if (confirmReset) {
+            if (confirm("คุณแน่ใจหรือไม่ที่จะล้างข้อมูลการขายทั้งหมด?\n\nการดำเนินการนี้จะลบประวัติการขายทั้งหมดออกจากระบบและไม่สามารถกู้คืนได้!")) {
                 localStorage.removeItem("salesHistory");
                 cart = [];
                 renderCart();
