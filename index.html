@@ -114,7 +114,10 @@
             <!-- ประวัติการชำระเงินล่าสุดในหน้าร้าน POS -->
             <div class="bg-white border border-slate-200 rounded-xl p-5 sm:p-6">
                 <div class="flex justify-between items-baseline mb-4">
-                    <h3 class="text-base font-semibold text-slate-900">รายการล่าสุด</h3>
+                    <div>
+                        <h3 class="text-base font-semibold text-slate-900">รายการล่าสุด</h3>
+                        <p class="text-xs text-slate-500 mt-0.5">กดที่แถวรายการเพื่อดูใบเสร็จ / รายละเอียดเพิ่มเติม</p>
+                    </div>
                     <span class="text-xs text-slate-500">แสดง 5 รายการล่าสุด</span>
                 </div>
                 <div class="overflow-x-auto">
@@ -197,6 +200,37 @@
         </section>
     </main>
 
+    <!-- Popup แสดงรายละเอียดออเดอร์ -->
+    <div id="order-detail-modal" class="hidden fixed inset-0 z-50 bg-slate-900/45 flex items-center justify-center p-4" onclick="if(event.target===this) closeOrderDetailModal()">
+        <div class="modal-panel bg-white rounded-xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true">
+            <div class="flex justify-between items-start border-b border-slate-200 pb-3">
+                <div>
+                    <h3 class="text-lg font-semibold text-slate-900">รายละเอียดออเดอร์</h3>
+                    <p id="detail-order-time" class="text-xs text-slate-500 mt-0.5 num"></p>
+                </div>
+                <span id="detail-order-pay" class="px-2.5 py-1 rounded-md text-xs font-medium"></span>
+            </div>
+
+            <div class="mt-4">
+                <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">รายการที่สั่ง</p>
+                <div id="detail-order-items" class="divide-y divide-slate-100 bg-slate-50 rounded-lg p-3 border border-slate-200">
+                    <!-- รายการสินค้าจะมาใส่ที่นี่ -->
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-t border-slate-200 flex justify-between items-center text-sm">
+                <span class="font-medium text-slate-600">จำนวนรวมทั้งหมด</span>
+                <span id="detail-order-qty" class="font-semibold text-slate-900 num"></span>
+            </div>
+            <div class="mt-1 flex justify-between items-center text-base">
+                <span class="font-semibold text-slate-800">ยอดชำระเงินรวม</span>
+                <span id="detail-order-total" class="font-bold text-brand-700 num text-xl"></span>
+            </div>
+
+            <button onclick="closeOrderDetailModal()" class="w-full mt-6 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium py-2.5 rounded-lg transition">ปิดหน้าต่าง</button>
+        </div>
+    </div>
+
     <!-- Popup เพิ่มเมนูใหม่ -->
     <div id="add-menu-modal" class="hidden fixed inset-0 z-50 bg-slate-900/45 flex items-center justify-center p-4" onclick="if(event.target===this) closeAddMenuModal()">
         <div class="modal-panel bg-white rounded-xl shadow-xl w-full max-w-sm p-6 max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="add-menu-title">
@@ -253,17 +287,31 @@
 
     <!-- Popup เลือกระดับความหวาน -->
     <div id="sweet-modal" class="hidden fixed inset-0 z-50 bg-slate-900/45 flex items-center justify-center p-4" onclick="if(event.target===this) closeSweetModal()">
-        <div class="modal-panel bg-white rounded-xl shadow-xl w-full max-w-sm p-6" role="dialog" aria-modal="true" aria-labelledby="sweet-modal-name">
+        <div class="modal-panel bg-white rounded-xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="sweet-modal-name">
             <h3 id="sweet-modal-name" class="text-lg font-semibold text-slate-900"></h3>
             <p id="sweet-modal-price" class="text-sm text-slate-500 num mt-0.5"></p>
 
-            <p class="text-sm font-medium text-slate-700 mt-5 mb-2">ระดับความหวาน</p>
-            <div class="grid gap-2">
-                <button onclick="confirmSweet('หวานปกติ')" class="text-left border border-slate-300 hover:border-brand-600 hover:bg-brand-50 px-4 py-3 rounded-lg font-medium transition">หวานปกติ</button>
-                <button onclick="confirmSweet('หวาน 50%')" class="text-left border border-slate-300 hover:border-brand-600 hover:bg-brand-50 px-4 py-3 rounded-lg font-medium transition">หวาน 50%</button>
-                <button onclick="confirmSweet('ไม่หวานเลย')" class="text-left border border-slate-300 hover:border-brand-600 hover:bg-brand-50 px-4 py-3 rounded-lg font-medium transition">ไม่หวานเลย</button>
+            <div class="flex justify-between items-center mt-5 mb-2">
+                <p class="text-sm font-medium text-slate-700">ระดับความหวาน</p>
+                <button onclick="toggleAddSweetMode()" class="text-xs text-brand-700 hover:underline font-medium">+ เพิ่มระดับความหวาน</button>
             </div>
-            <button onclick="closeSweetModal()" class="w-full mt-3 text-sm text-slate-500 hover:text-slate-800 py-2 font-medium">ยกเลิก</button>
+
+            <!-- ฟอร์มเพิ่ม/แก้ไขระดับความหวาน -->
+            <div id="sweet-form-container" class="hidden bg-slate-50 p-3 rounded-lg border border-slate-200 mb-3 space-y-2">
+                <input type="hidden" id="edit-sweet-index" value="-1">
+                <input id="new-sweet-input" type="text" maxlength="30" placeholder="เช่น หวาน 25%" class="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-sm text-slate-900">
+                <div class="flex justify-end gap-2">
+                    <button onclick="cancelSweetForm()" class="text-xs text-slate-600 px-3 py-1.5 rounded border border-slate-300 hover:bg-white">ยกเลิก</button>
+                    <button onclick="saveSweetOption()" class="text-xs bg-brand-600 text-white px-3 py-1.5 rounded hover:bg-brand-700 font-medium">บันทึก</button>
+                </div>
+            </div>
+
+            <!-- รายการระดับความหวาน -->
+            <div id="sweet-options-list" class="grid gap-2">
+                <!-- แสดงตัวเลือกความหวาน -->
+            </div>
+
+            <button onclick="closeSweetModal()" class="w-full mt-4 text-sm text-slate-500 hover:text-slate-800 py-2 font-medium">ปิด</button>
         </div>
     </div>
 
@@ -325,6 +373,17 @@
             localStorage.setItem("editedMenus", JSON.stringify(editedMenusMap));
         }
 
+        function loadSweetOptions() {
+            try {
+                const list = JSON.parse(localStorage.getItem("sweetOptions") || "[]");
+                if (Array.isArray(list) && list.length > 0) return list;
+            } catch (e) {}
+            return ["หวานปกติ", "หวาน 50%", "ไม่หวานเลย"];
+        }
+        function saveSweetOptions() {
+            localStorage.setItem("sweetOptions", JSON.stringify(sweetOptions));
+        }
+
         let editedMenusMap = loadEditedMenus();
         let menus = defaultMenus.map(m => {
             if (editedMenusMap[m.id]) {
@@ -333,13 +392,14 @@
             return m;
         }).concat(loadCustomMenus());
 
+        let sweetOptions = loadSweetOptions();
         let pendingMenuId = null;
         let cart = [];
         let selectedPayment = "เงินสด";
         let activeFilter = "daily";
         let myChart = null;
         let currentFilteredSales = [];
-        let shouldClearImage = false; // ตัวแปรสถานะสำหรับลบรูปภาพ
+        let shouldClearImage = false;
 
         function getLocalDateString(d) {
             const year = d.getFullYear();
@@ -379,7 +439,7 @@
                         <!-- ปุ่มแก้ไข & ลบ -->
                         <div class="absolute top-2 right-2 flex gap-1 z-10 bg-white/80 backdrop-blur-xs px-1 rounded shadow-xs">
                             <button onclick="openEditMenuModal(${item.id})" class="text-[11px] text-slate-500 hover:text-brand-700 px-1 py-0.5" title="แก้ไขเมนู">แก้ไข</button>
-                            ${item.custom ? `<button onclick="removeCustomMenu(\${item.id})" class="text-[11px] text-slate-400 hover:text-rose-600 px-1 py-0.5" title="ลบเมนู">ลบ</button>` : ''}
+                            ${item.custom ? `<button onclick="removeCustomMenu(${item.id})" class="text-[11px] text-slate-400 hover:text-rose-600 px-1 py-0.5" title="ลบเมนู">ลบ</button>` : ''}
                         </div>
 
                         <button onclick="openSweetModal(${item.id})" class="w-full text-left flex flex-col justify-between h-full">
@@ -541,7 +601,86 @@
             pendingMenuId = menuId;
             document.getElementById("sweet-modal-name").innerText = item.name;
             document.getElementById("sweet-modal-price").innerText = `${item.price} ฿`;
+            cancelSweetForm();
+            renderSweetOptionsList();
             document.getElementById("sweet-modal").classList.remove("hidden");
+        }
+
+        function renderSweetOptionsList() {
+            const container = document.getElementById("sweet-options-list");
+            container.innerHTML = sweetOptions.map((opt, index) => `
+                <div class="flex items-center gap-2">
+                    <button onclick="confirmSweet('${opt}')" class="flex-1 text-left border border-slate-300 hover:border-brand-600 hover:bg-brand-50 px-4 py-3 rounded-lg font-medium transition">${opt}</button>
+                    <button onclick="editSweetOption(${index})" class="text-xs text-slate-500 hover:text-brand-700 px-2.5 py-3 border border-slate-200 rounded-lg bg-slate-50 transition" title="แก้ไข">แก้ไข</button>
+                    ${sweetOptions.length > 1 ? `<button onclick="deleteSweetOption(${index})" class="text-xs text-slate-400 hover:text-rose-600 px-2.5 py-3 border border-slate-200 rounded-lg bg-slate-50 transition" title="ลบ">ลบ</button>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function toggleAddSweetMode(editIndex = -1) {
+            const form = document.getElementById("sweet-form-container");
+            const input = document.getElementById("new-sweet-input");
+            document.getElementById("edit-sweet-index").value = editIndex;
+            
+            if (editIndex >= 0) {
+                input.value = sweetOptions[editIndex];
+            } else {
+                input.value = "";
+            }
+            form.classList.remove("hidden");
+            input.focus();
+        }
+
+        function cancelSweetForm() {
+            document.getElementById("sweet-form-container").classList.add("hidden");
+            document.getElementById("new-sweet-input").value = "";
+            document.getElementById("edit-sweet-index").value = -1;
+        }
+
+        function saveSweetOption() {
+            const input = document.getElementById("new-sweet-input");
+            const val = input.value.trim().replace(/\s+/g, ' ');
+            const editIndex = Number(document.getElementById("edit-sweet-index").value);
+
+            if (!val) {
+                alert("กรุณากรอกระดับความหวาน");
+                return;
+            }
+            if (/[<>"&]/.test(val)) {
+                alert("ห้ามมีอักขระพิเศษ < > \" &");
+                return;
+            }
+            if (sweetOptions.includes(val) && (editIndex === -1 || sweetOptions[editIndex] !== val)) {
+                alert("มีระดับความหวานนี้อยู่แล้ว");
+                return;
+            }
+
+            if (editIndex >= 0) {
+                sweetOptions[editIndex] = val;
+            } else {
+                sweetOptions.push(val);
+            }
+
+            saveSweetOptions();
+            cancelSweetForm();
+            renderSweetOptionsList();
+        }
+
+        function editSweetOption(index) {
+            toggleAddSweetMode(index);
+        }
+
+        function deleteSweetOption(index) {
+            if (sweetOptions.length <= 1) {
+                alert("ต้องมีระดับความหวานไว้อย่างน้อย 1 รูปแบบครับ");
+                return;
+            }
+            if (confirm(`ต้องการลบระดับความหวาน "${sweetOptions[index]}" หรือไม่?`)) {
+                sweetOptions.splice(index, 1);
+                saveSweetOptions();
+                cancelSweetForm();
+                renderSweetOptionsList();
+            }
         }
 
         document.addEventListener("keydown", (e) => {
@@ -549,6 +688,7 @@
                 closeSweetModal();
                 closeAddMenuModal();
                 closeEditMenuModal();
+                closeOrderDetailModal();
             }
         });
 
@@ -652,6 +792,43 @@
             renderRecentOrders();
         }
 
+        function openOrderDetailModal(orderId) {
+            const salesHistory = JSON.parse(localStorage.getItem("salesHistory") || "[]");
+            const order = salesHistory.find(o => o.id === orderId);
+            if (!order) return;
+
+            const orderDate = order.timestamp ? new Date(order.timestamp) : new Date(order.date);
+            const formattedDate = orderDate.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
+            const formattedTime = orderDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
+
+            document.getElementById("detail-order-time").innerText = `${formattedDate} เวลา ${formattedTime} น.`;
+
+            const badgeEl = document.getElementById("detail-order-pay");
+            badgeEl.innerText = order.paymentMethod;
+            badgeEl.className = order.paymentMethod === 'เงินสด' ? 'px-2.5 py-1 rounded-md text-xs font-medium bg-brand-50 text-brand-700 border border-brand-200' : 'px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200';
+
+            const itemsContainer = document.getElementById("detail-order-items");
+            itemsContainer.innerHTML = order.items.map(item => `
+                <div class="py-2.5 flex justify-between items-center text-sm">
+                    <div>
+                        <p class="font-medium text-slate-900">${item.name}</p>
+                        <p class="text-xs text-brand-700 font-medium mt-0.5">ระดับความหวาน: ${item.sweet || 'ปกติ'}</p>
+                        <p class="text-xs text-slate-500 mt-0.5 num">${item.price} ฿ × ${item.qty} แก้ว</p>
+                    </div>
+                    <span class="font-semibold text-slate-900 num">${item.price * item.qty} ฿</span>
+                </div>
+            `).join('');
+
+            document.getElementById("detail-order-qty").innerText = `${order.totalQty} แก้ว`;
+            document.getElementById("detail-order-total").innerText = `${order.totalPrice.toLocaleString()} ฿`;
+
+            document.getElementById("order-detail-modal").classList.remove("hidden");
+        }
+
+        function closeOrderDetailModal() {
+            document.getElementById("order-detail-modal").classList.add("hidden");
+        }
+
         function renderRecentOrders() {
             const tbody = document.getElementById("recent-orders-body");
             if (!tbody) return;
@@ -666,7 +843,14 @@
             const recentOrders = [...salesHistory].reverse().slice(0, 5);
 
             tbody.innerHTML = recentOrders.map(order => {
-                const itemList = order.items.map(i => `${i.name}${i.sweet ? ' (' + i.sweet + ')' : ''} x${i.qty}`).join(', ');
+                const itemListHtml = order.items.map(i => `
+                    <div class="truncate max-w-[280px] sm:max-w-md">
+                        <span class="font-medium">${i.name}</span>
+                        ${i.sweet ? `<span class="text-brand-700 text-xs font-medium bg-brand-50 border border-brand-200 px-1.5 py-0.5 rounded ml-1">${i.sweet}</span>` : ''}
+                        <span class="text-slate-500 text-xs num ml-1">×${i.qty}</span>
+                    </div>
+                `).join('');
+
                 const badgeColor = order.paymentMethod === 'เงินสด' ? 'bg-brand-50 text-brand-700' : 'bg-slate-100 text-slate-700';
                 
                 const orderDate = order.timestamp ? new Date(order.timestamp) : new Date(order.date);
@@ -684,14 +868,14 @@
                 const fullDateTimeStr = `${formattedDate} ${formattedTime} น.`;
 
                 return `
-                    <tr class="hover:bg-slate-50">
+                    <tr onclick="openOrderDetailModal(${order.id})" class="hover:bg-brand-50/50 cursor-pointer transition">
                         <td class="py-3 pr-4 text-slate-600 num whitespace-nowrap">${fullDateTimeStr}</td>
-                        <td class="py-3 pr-4 text-slate-900">${itemList}</td>
+                        <td class="py-3 pr-4 text-slate-900 space-y-1">${itemListHtml}</td>
                         <td class="py-3 text-center">
                             <span class="px-2 py-1 rounded-md text-xs font-medium ${badgeColor}">${order.paymentMethod}</span>
                         </td>
-                        <td class="py-3 text-center text-slate-600 num">${order.totalQty} แก้ว</td>
-                        <td class="py-3 text-right font-semibold text-slate-900 num">${order.totalPrice.toLocaleString()} ฿</td>
+                        <td class="py-3 text-center text-slate-600 num whitespace-nowrap">${order.totalQty} แก้ว</td>
+                        <td class="py-3 text-right font-semibold text-slate-900 num whitespace-nowrap">${order.totalPrice.toLocaleString()} ฿</td>
                     </tr>
                 `;
             }).join('');
@@ -779,17 +963,6 @@
         }
         function goToday() { initPeriods(); renderDashboard(); }
 
-        function selectDateFromCalendar(dateStr) {
-            selectedDate = dateStr;
-            filterSummary("daily");
-        }
-        function shiftCalendarMonth(dir) {
-            const [y, m, d] = selectedDate.split('-').map(Number);
-            const lastDay = new Date(y, m - 1 + dir + 1, 0).getDate();
-            const dt = new Date(y, m - 1 + dir, Math.min(d, lastDay));
-            selectedDate = getLocalDateString(dt);
-            renderDashboard();
-        }
         function selectMonthFromYear(monthKey) {
             selectedMonth = monthKey;
             filterSummary("monthly");
@@ -943,61 +1116,6 @@
                 </div>`;
         }
 
-        function calendarHTML(key, orders, selectedDateStr = null) {
-            const [y, m] = key.split('-').map(Number);
-            const firstDay = new Date(y, m - 1, 1).getDay();
-            const daysInMonth = new Date(y, m, 0).getDate();
-            const daily = {};
-            orders.forEach(o => {
-                const d = Number(orderDateStr(o).slice(8, 10));
-                if (!daily[d]) daily[d] = { cups: 0, revenue: 0 };
-                daily[d].cups += o.totalQty;
-                daily[d].revenue += o.totalPrice;
-            });
-
-            let cells = "";
-            for (let i = 0; i < firstDay; i++) {
-                cells += `<div class="p-2 bg-slate-50 rounded-lg min-h-[70px] border border-slate-100 opacity-40"></div>`;
-            }
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dateStr = `${key}-${pad(day)}`;
-                const st = daily[day];
-                const highlight = selectedDateStr ? dateStr === selectedDateStr : false;
-                const cls = highlight
-                    ? "border border-brand-600 bg-brand-50 ring-1 ring-brand-600"
-                    : "border border-slate-200 bg-white hover:border-brand-400";
-                cells += `
-                    <button onclick="selectDateFromCalendar('${dateStr}')" class="text-left p-2 rounded-lg min-h-[75px] transition flex flex-col justify-between ${cls}">
-                        <div class="flex justify-between items-center w-full">
-                            <span class="font-medium text-xs num text-slate-700">${day}</span>
-                            ${st ? `<span class="text-[10px] bg-brand-100 text-brand-800 px-1.5 py-0.5 rounded font-medium num">\${st.cups} แก้ว</span>` : ''}
-                        </div>
-                        <div class="text-right mt-1 w-full">
-                            ${st ? `<p class="text-xs font-semibold text-slate-900 num">\${fmt(st.revenue)} ฿</p>` : `<p class="text-[11px] text-slate-300">–</p>`}
-                        </div>
-                    </button>`;
-            }
-            const monthLabel = new Date(y, m - 1, 1).toLocaleDateString('th-TH', { month: 'long', year: 'numeric' });
-            const monthNav = selectedDateStr ? `
-                <div class="flex items-center gap-1 shrink-0">
-                    <button onclick="shiftCalendarMonth(-1)" class="w-8 h-8 border border-slate-300 rounded-lg text-slate-600 hover:border-brand-600 hover:text-brand-700 transition" aria-label="เดือนก่อน">‹</button>
-                    <button onclick="shiftCalendarMonth(1)" class="w-8 h-8 border border-slate-300 rounded-lg text-slate-600 hover:border-brand-600 hover:text-brand-700 transition" aria-label="เดือนถัดไป">›</button>
-                </div>` : '';
-            return `
-                <div class="bg-white border border-slate-200 rounded-xl p-5 sm:p-6">
-                    <div class="flex justify-between items-start gap-3 mb-4">
-                        <div>
-                            <h3 class="text-base font-semibold text-slate-900">ปฏิทิน${selectedDateStr ? ' ' + monthLabel : 'ยอดขายรายวันในเดือน'}</h3>
-                        </div>
-                        ${monthNav}
-                    </div>
-                    <div class="grid grid-cols-7 gap-1 text-center text-xs font-medium text-slate-500 mb-2">
-                        <div class="text-rose-600 py-1">อา.</div><div class="py-1">จ.</div><div class="py-1">อ.</div><div class="py-1">พ.</div><div class="py-1">พฤ.</div><div class="py-1">ศ.</div><div class="py-1">ส.</div>
-                    </div>
-                    <div class="grid grid-cols-7 gap-1 text-sm">${cells}</div>
-                </div>`;
-        }
-
         function monthBreakdownHTML(key, orders) {
             const months = Array.from({ length: 12 }, () => ({ cups: 0, revenue: 0 }));
             orders.forEach(o => {
@@ -1061,10 +1179,6 @@
                 </div>
                 ${statCardsHTML(cur)}`;
 
-            if (type === "daily") {
-                html += calendarHTML(key.slice(0, 7), ordersFor("monthly", key.slice(0, 7)), key);
-            }
-
             if (cur.orders === 0) {
                 html += `
                     <div class="bg-white border border-slate-200 rounded-xl p-5 sm:p-6">
@@ -1076,7 +1190,6 @@
                 if (type === "daily") {
                     html += dailyDetailHTML(cur);
                 } else if (type === "monthly") {
-                    html += calendarHTML(key, orders);
                     html += menuTableHTML(cur);
                 } else {
                     html += monthBreakdownHTML(key, orders);
