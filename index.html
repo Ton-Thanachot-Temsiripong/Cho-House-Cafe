@@ -285,33 +285,39 @@
         </div>
     </div>
 
-    <!-- Popup เลือกระดับความหวาน -->
+    <!-- Popup เลือกตัวเลือกเครื่องดื่ม (ความหวาน / นม / ท็อปปิ้ง) -->
     <div id="sweet-modal" class="hidden fixed inset-0 z-50 bg-slate-900/45 flex items-center justify-center p-4" onclick="if(event.target===this) closeSweetModal()">
         <div class="modal-panel bg-white rounded-xl shadow-xl w-full max-w-md p-6 max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="sweet-modal-name">
-            <h3 id="sweet-modal-name" class="text-lg font-semibold text-slate-900"></h3>
-            <p id="sweet-modal-price" class="text-sm text-slate-500 num mt-0.5"></p>
-
-            <div class="flex justify-between items-center mt-5 mb-2">
-                <p class="text-sm font-medium text-slate-700">ระดับความหวาน</p>
-                <button onclick="toggleAddSweetMode()" class="text-xs text-brand-700 hover:underline font-medium">+ เพิ่มระดับความหวาน</button>
+            <div class="flex justify-between items-start gap-3">
+                <div class="min-w-0">
+                    <h3 id="sweet-modal-name" class="text-lg font-semibold text-slate-900"></h3>
+                    <p id="sweet-modal-price" class="text-sm text-slate-500 num mt-0.5"></p>
+                </div>
+                <button id="sweet-manage-btn" onclick="toggleOptionManageMode()" class="text-xs text-slate-500 hover:text-brand-700 font-medium transition shrink-0 mt-1">จัดการตัวเลือก</button>
             </div>
 
-            <!-- ฟอร์มเพิ่ม/แก้ไขระดับความหวาน -->
-            <div id="sweet-form-container" class="hidden bg-slate-50 p-3 rounded-lg border border-slate-200 mb-3 space-y-2">
-                <input type="hidden" id="edit-sweet-index" value="-1">
-                <input id="new-sweet-input" type="text" maxlength="30" placeholder="เช่น หวาน 25%" class="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-sm text-slate-900">
+            <!-- ฟอร์มเพิ่ม/แก้ไขตัวเลือก -->
+            <div id="option-form-container" class="hidden bg-slate-50 p-3 rounded-lg border border-slate-200 mt-4 space-y-2">
+                <p id="option-form-title" class="text-sm font-medium text-slate-700"></p>
+                <input id="option-form-name" type="text" maxlength="30" autocomplete="off" placeholder="ชื่อตัวเลือก" onkeydown="if(event.key==='Enter') saveOptionForm()" class="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-sm text-slate-900">
+                <div id="option-form-price-wrap" class="hidden">
+                    <label for="option-form-price" class="block text-xs text-slate-500 mb-1">ราคาที่บวกเพิ่ม (บาท) ใส่ 0 ถ้าไม่คิดเพิ่ม</label>
+                    <input id="option-form-price" type="number" inputmode="numeric" min="0" step="1" placeholder="0" onkeydown="if(event.key==='Enter') saveOptionForm()" class="w-full bg-white border border-slate-300 px-3 py-2 rounded-lg text-sm text-slate-900 num">
+                </div>
+                <p id="option-form-error" class="hidden text-xs text-rose-600"></p>
                 <div class="flex justify-end gap-2">
-                    <button onclick="cancelSweetForm()" class="text-xs text-slate-600 px-3 py-1.5 rounded border border-slate-300 hover:bg-white">ยกเลิก</button>
-                    <button onclick="saveSweetOption()" class="text-xs bg-brand-600 text-white px-3 py-1.5 rounded hover:bg-brand-700 font-medium">บันทึก</button>
+                    <button onclick="cancelOptionForm()" class="text-xs text-slate-600 px-3 py-1.5 rounded border border-slate-300 hover:bg-white">ยกเลิก</button>
+                    <button onclick="saveOptionForm()" class="text-xs bg-brand-600 text-white px-3 py-1.5 rounded hover:bg-brand-700 font-medium">บันทึก</button>
                 </div>
             </div>
 
-            <!-- รายการระดับความหวาน -->
-            <div id="sweet-options-list" class="grid gap-2">
-                <!-- แสดงตัวเลือกความหวาน -->
-            </div>
+            <!-- กลุ่มตัวเลือก: ความหวาน / นม / ท็อปปิ้ง -->
+            <div id="option-sections"></div>
 
-            <button onclick="closeSweetModal()" class="w-full mt-4 text-sm text-slate-500 hover:text-slate-800 py-2 font-medium">ปิด</button>
+            <div id="sweet-actions" class="grid grid-cols-2 gap-2 mt-6">
+                <button onclick="closeSweetModal()" class="border border-slate-300 hover:border-slate-400 text-slate-700 font-medium py-2.5 rounded-lg transition">ยกเลิก</button>
+                <button id="option-confirm-btn" onclick="confirmOptions()" class="bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2.5 rounded-lg transition num">เพิ่มลงตะกร้า</button>
+            </div>
         </div>
     </div>
 
@@ -384,6 +390,34 @@
             localStorage.setItem("sweetOptions", JSON.stringify(sweetOptions));
         }
 
+        // นมและท็อปปิ้ง: เก็บเป็น { name, price } โดย price คือราคาที่บวกเพิ่มต่อแก้ว
+        const DEFAULT_MILK = [
+            { name: "นมสด", price: 0 },
+            { name: "นมโอ๊ต", price: 10 },
+            { name: "นมอัลมอนด์", price: 20 }
+        ];
+        const DEFAULT_TOPPING = [
+            { name: "ไข่มุกป๊อปถั่วแดง", price: 15 },
+            { name: "ไข่มุกป๊อปข้าวบาร์เลย์", price: 15 }
+        ];
+        function loadOptionList(key, defaults) {
+            try {
+                const list = JSON.parse(localStorage.getItem(key) || "null");
+                if (Array.isArray(list)) {
+                    return list
+                        .filter(o => o && typeof o.name === "string" && o.name && Number.isFinite(Number(o.price)))
+                        .map(o => ({ name: o.name, price: Math.max(0, Math.round(Number(o.price))) }));
+                }
+            } catch (e) {}
+            return defaults.map(o => ({ ...o }));
+        }
+        function saveMilkOptions() {
+            localStorage.setItem("milkOptions", JSON.stringify(milkOptions));
+        }
+        function saveToppingOptions() {
+            localStorage.setItem("toppingOptions", JSON.stringify(toppingOptions));
+        }
+
         let editedMenusMap = loadEditedMenus();
         let menus = defaultMenus.map(m => {
             if (editedMenusMap[m.id]) {
@@ -393,13 +427,28 @@
         }).concat(loadCustomMenus());
 
         let sweetOptions = loadSweetOptions();
+        let milkOptions = loadOptionList("milkOptions", DEFAULT_MILK);
+        let toppingOptions = loadOptionList("toppingOptions", DEFAULT_TOPPING);
         let pendingMenuId = null;
+        let selectedSweet = null;
+        let selectedMilk = null;        // null = ไม่ใส่นม
+        let selectedToppings = [];      // เลือกได้หลายอย่าง
+        let optionManageMode = false;
+        let optionForm = { group: null, index: -1 };
         let cart = [];
         let selectedPayment = "เงินสด";
         let activeFilter = "daily";
         let myChart = null;
         let currentFilteredSales = [];
         let shouldClearImage = false;
+
+        function optionText(i) {
+            const parts = [];
+            if (i.sweet) parts.push(i.sweet);
+            if (i.milk !== undefined) parts.push(i.milk ? i.milk : "ไม่ใส่นม");
+            if (i.toppings && i.toppings.length) parts.push("ท็อปปิ้ง: " + i.toppings.join(", "));
+            return parts.join(" · ");
+        }
 
         function getLocalDateString(d) {
             const year = d.getFullYear();
@@ -596,91 +645,218 @@
             renderCart();
         }
 
+        const GROUP_LABEL = { sweet: "ระดับความหวาน", milk: "นม", topping: "ท็อปปิ้ง (เลือกได้หลายอย่าง)" };
+        const GROUP_NAME = { sweet: "ระดับความหวาน", milk: "นม", topping: "ท็อปปิ้ง" };
+
+        function groupList(g) {
+            return g === "sweet" ? sweetOptions : g === "milk" ? milkOptions : toppingOptions;
+        }
+        function optName(g, o) {
+            return g === "sweet" ? o : o.name;
+        }
+
         function openSweetModal(menuId) {
             const item = menus.find(m => m.id === menuId);
             pendingMenuId = menuId;
+            selectedSweet = sweetOptions[0];
+            selectedMilk = null;
+            selectedToppings = [];
+            optionManageMode = false;
             document.getElementById("sweet-modal-name").innerText = item.name;
-            document.getElementById("sweet-modal-price").innerText = `${item.price} ฿`;
-            cancelSweetForm();
-            renderSweetOptionsList();
+            document.getElementById("sweet-modal-price").innerText = `ราคาเริ่มต้น ${item.price} ฿`;
+            cancelOptionForm();
+            renderOptionSections();
             document.getElementById("sweet-modal").classList.remove("hidden");
         }
 
-        function renderSweetOptionsList() {
-            const container = document.getElementById("sweet-options-list");
-            container.innerHTML = sweetOptions.map((opt, index) => `
-                <div class="flex items-center gap-2">
-                    <button onclick="confirmSweet('${opt}')" class="flex-1 text-left border border-slate-300 hover:border-brand-600 hover:bg-brand-50 px-4 py-3 rounded-lg font-medium transition">${opt}</button>
-                    <button onclick="editSweetOption(${index})" class="text-xs text-slate-500 hover:text-brand-700 px-2.5 py-3 border border-slate-200 rounded-lg bg-slate-50 transition" title="แก้ไข">แก้ไข</button>
-                    ${sweetOptions.length > 1 ? `<button onclick="deleteSweetOption(${index})" class="text-xs text-slate-400 hover:text-rose-600 px-2.5 py-3 border border-slate-200 rounded-lg bg-slate-50 transition" title="ลบ">ลบ</button>` : ''}
-                </div>
-            `).join('');
+        function currentUnitPrice() {
+            const item = menus.find(m => m.id === pendingMenuId);
+            if (!item) return 0;
+            const milk = selectedMilk ? milkOptions.find(m => m.name === selectedMilk) : null;
+            const tops = selectedToppings.map(n => toppingOptions.find(t => t.name === n)).filter(Boolean);
+            return item.price + (milk ? milk.price : 0) + tops.reduce((sum, t) => sum + t.price, 0);
         }
 
-        function toggleAddSweetMode(editIndex = -1) {
-            const form = document.getElementById("sweet-form-container");
-            const input = document.getElementById("new-sweet-input");
-            document.getElementById("edit-sweet-index").value = editIndex;
-            
-            if (editIndex >= 0) {
-                input.value = sweetOptions[editIndex];
+        function priceTag(p) {
+            return p > 0 ? `<span class="ml-1 text-xs opacity-75 num">+${p}</span>` : '';
+        }
+
+        function chipHTML(label, active, onclick, role) {
+            return `<button onclick="${onclick}" role="${role}" aria-checked="${active}" class="px-4 py-2 rounded-full text-sm font-medium border transition ${active ? 'bg-brand-600 border-brand-600 text-white' : 'bg-white border-slate-300 text-slate-700 hover:border-brand-600 hover:text-brand-700'}">${label}</button>`;
+        }
+
+        function addChipHTML(group) {
+            return `<button onclick="openOptionForm('${group}')" class="px-4 py-2 rounded-full text-sm font-medium border border-dashed border-slate-300 text-slate-500 hover:border-brand-600 hover:text-brand-700 transition">+ เพิ่ม</button>`;
+        }
+
+        function sectionHTML(title, body) {
+            return `<div class="mt-5"><p class="text-sm font-medium text-slate-700 mb-2">${title}</p>${body}</div>`;
+        }
+
+        function renderOptionSections() {
+            const box = document.getElementById("option-sections");
+            document.getElementById("sweet-manage-btn").innerText = optionManageMode ? "เสร็จสิ้น" : "จัดการตัวเลือก";
+            document.getElementById("sweet-actions").classList.toggle("hidden", optionManageMode);
+
+            let html = "";
+            if (optionManageMode) {
+                ["sweet", "milk", "topping"].forEach(g => {
+                    const rows = groupList(g).map((o, i) => `
+                        <div class="flex items-center gap-2">
+                            <span class="flex-1 border border-slate-200 bg-slate-50 px-4 py-2.5 rounded-lg text-sm font-medium text-slate-800">
+                                ${optName(g, o)}${g !== "sweet" ? ` <span class="text-slate-500 font-normal num">${o.price > 0 ? "+" + o.price + " ฿" : "ไม่คิดเพิ่ม"}</span>` : ""}
+                            </span>
+                            <button onclick="openOptionForm('${g}', ${i})" class="text-xs text-slate-500 hover:text-brand-700 px-2.5 py-2.5 border border-slate-200 rounded-lg bg-white transition">แก้ไข</button>
+                            ${(g !== "sweet" || sweetOptions.length > 1) ? `<button onclick="deleteOption('${g}', ${i})" class="text-xs text-slate-400 hover:text-rose-600 px-2.5 py-2.5 border border-slate-200 rounded-lg bg-white transition">ลบ</button>` : ""}
+                        </div>
+                    `).join("");
+                    html += sectionHTML(GROUP_NAME[g], `<div class="grid gap-2">${rows}<div>${addChipHTML(g)}</div></div>`);
+                });
             } else {
-                input.value = "";
+                const sweetChips = sweetOptions.map((o, i) => chipHTML(o, o === selectedSweet, `selectSweet(${i})`, "radio")).join("") + addChipHTML("sweet");
+
+                const milkChips = chipHTML("ไม่ใส่นม", selectedMilk === null, "selectMilk(-1)", "radio")
+                    + milkOptions.map((o, i) => chipHTML(o.name + priceTag(o.price), o.name === selectedMilk, `selectMilk(${i})`, "radio")).join("")
+                    + addChipHTML("milk");
+
+                const toppingChips = toppingOptions.map((o, i) => chipHTML(o.name + priceTag(o.price), selectedToppings.includes(o.name), `toggleTopping(${i})`, "checkbox")).join("") + addChipHTML("topping");
+
+                html += sectionHTML(GROUP_LABEL.sweet, `<div class="flex flex-wrap gap-2" role="radiogroup">${sweetChips}</div>`);
+                html += sectionHTML(GROUP_LABEL.milk, `<div class="flex flex-wrap gap-2" role="radiogroup">${milkChips}</div>`);
+                html += sectionHTML(GROUP_LABEL.topping, `<div class="flex flex-wrap gap-2">${toppingChips}</div>`);
             }
-            form.classList.remove("hidden");
-            input.focus();
+            box.innerHTML = html;
+            updateConfirmButton();
         }
 
-        function cancelSweetForm() {
-            document.getElementById("sweet-form-container").classList.add("hidden");
-            document.getElementById("new-sweet-input").value = "";
-            document.getElementById("edit-sweet-index").value = -1;
+        function updateConfirmButton() {
+            const btn = document.getElementById("option-confirm-btn");
+            if (btn) btn.innerText = `เพิ่มลงตะกร้า · ${currentUnitPrice()} ฿`;
         }
 
-        function saveSweetOption() {
-            const input = document.getElementById("new-sweet-input");
-            const val = input.value.trim().replace(/\s+/g, ' ');
-            const editIndex = Number(document.getElementById("edit-sweet-index").value);
+        function selectSweet(index) {
+            selectedSweet = sweetOptions[index];
+            renderOptionSections();
+        }
+        function selectMilk(index) {
+            selectedMilk = index < 0 ? null : milkOptions[index].name;
+            renderOptionSections();
+        }
+        function toggleTopping(index) {
+            const name = toppingOptions[index].name;
+            selectedToppings = selectedToppings.includes(name)
+                ? selectedToppings.filter(n => n !== name)
+                : [...selectedToppings, name];
+            renderOptionSections();
+        }
 
-            if (!val) {
-                alert("กรุณากรอกระดับความหวาน");
-                return;
-            }
-            if (/[<>"&]/.test(val)) {
-                alert("ห้ามมีอักขระพิเศษ < > \" &");
-                return;
-            }
-            if (sweetOptions.includes(val) && (editIndex === -1 || sweetOptions[editIndex] !== val)) {
-                alert("มีระดับความหวานนี้อยู่แล้ว");
-                return;
+        function toggleOptionManageMode() {
+            optionManageMode = !optionManageMode;
+            cancelOptionForm();
+            renderOptionSections();
+        }
+
+        function openOptionForm(group, index = -1) {
+            optionForm = { group, index };
+            const cur = index >= 0 ? groupList(group)[index] : null;
+            document.getElementById("option-form-title").innerText = `${index >= 0 ? "แก้ไข" : "เพิ่ม"}${GROUP_NAME[group]}`;
+            document.getElementById("option-form-name").value = cur ? optName(group, cur) : "";
+            document.getElementById("option-form-price-wrap").classList.toggle("hidden", group === "sweet");
+            document.getElementById("option-form-price").value = cur && group !== "sweet" ? cur.price : "";
+            document.getElementById("option-form-error").classList.add("hidden");
+            document.getElementById("option-form-container").classList.remove("hidden");
+            document.getElementById("option-form-name").focus();
+        }
+
+        function cancelOptionForm() {
+            optionForm = { group: null, index: -1 };
+            document.getElementById("option-form-container").classList.add("hidden");
+            document.getElementById("option-form-name").value = "";
+            document.getElementById("option-form-price").value = "";
+        }
+
+        function showOptionFormError(msg) {
+            const el = document.getElementById("option-form-error");
+            el.innerText = msg;
+            el.classList.remove("hidden");
+        }
+
+        function saveOptionForm() {
+            const { group, index } = optionForm;
+            if (!group) return;
+
+            const name = document.getElementById("option-form-name").value.trim().replace(/\s+/g, ' ');
+            const priceRaw = document.getElementById("option-form-price").value;
+            const price = group === "sweet" ? 0 : (priceRaw === "" ? 0 : Number(priceRaw));
+            const list = groupList(group);
+
+            if (!name) return showOptionFormError("กรุณากรอกชื่อตัวเลือก");
+            if (/[<>"&'\\]/.test(name)) return showOptionFormError("ชื่อห้ามมีอักขระ < > \" & ' \\");
+            if (!Number.isFinite(price) || price < 0) return showOptionFormError("ราคาที่บวกเพิ่มต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป");
+            if (group === "milk" && name === "ไม่ใส่นม") return showOptionFormError("ชื่อนี้เป็นตัวเลือกพื้นฐานอยู่แล้ว");
+            if (list.some((o, i) => i !== index && optName(group, o).toLowerCase() === name.toLowerCase())) {
+                return showOptionFormError("มีตัวเลือกชื่อนี้อยู่แล้ว");
             }
 
-            if (editIndex >= 0) {
-                sweetOptions[editIndex] = val;
+            if (group === "sweet") {
+                if (index >= 0) {
+                    if (sweetOptions[index] === selectedSweet) selectedSweet = name;
+                    sweetOptions[index] = name;
+                } else {
+                    sweetOptions.push(name);
+                    selectedSweet = name;
+                }
+                saveSweetOptions();
+            } else if (group === "milk") {
+                const rounded = Math.round(price);
+                if (index >= 0) {
+                    const old = milkOptions[index].name;
+                    milkOptions[index] = { name, price: rounded };
+                    if (selectedMilk === old) selectedMilk = name;
+                } else {
+                    milkOptions.push({ name, price: rounded });
+                    selectedMilk = name;
+                }
+                saveMilkOptions();
             } else {
-                sweetOptions.push(val);
+                const rounded = Math.round(price);
+                if (index >= 0) {
+                    const old = toppingOptions[index].name;
+                    toppingOptions[index] = { name, price: rounded };
+                    selectedToppings = selectedToppings.map(n => n === old ? name : n);
+                } else {
+                    toppingOptions.push({ name, price: rounded });
+                    selectedToppings = [...selectedToppings, name];
+                }
+                saveToppingOptions();
             }
 
-            saveSweetOptions();
-            cancelSweetForm();
-            renderSweetOptionsList();
+            cancelOptionForm();
+            renderOptionSections();
         }
 
-        function editSweetOption(index) {
-            toggleAddSweetMode(index);
-        }
-
-        function deleteSweetOption(index) {
-            if (sweetOptions.length <= 1) {
+        function deleteOption(group, index) {
+            const list = groupList(group);
+            const name = optName(group, list[index]);
+            if (group === "sweet" && sweetOptions.length <= 1) {
                 alert("ต้องมีระดับความหวานไว้อย่างน้อย 1 รูปแบบครับ");
                 return;
             }
-            if (confirm(`ต้องการลบระดับความหวาน "${sweetOptions[index]}" หรือไม่?`)) {
-                sweetOptions.splice(index, 1);
+            if (!confirm(`ต้องการลบ${GROUP_NAME[group]} "${name}" หรือไม่?`)) return;
+
+            list.splice(index, 1);
+            if (group === "sweet") {
+                if (name === selectedSweet) selectedSweet = sweetOptions[0];
                 saveSweetOptions();
-                cancelSweetForm();
-                renderSweetOptionsList();
+            } else if (group === "milk") {
+                if (name === selectedMilk) selectedMilk = null;
+                saveMilkOptions();
+            } else {
+                selectedToppings = selectedToppings.filter(n => n !== name);
+                saveToppingOptions();
             }
+            cancelOptionForm();
+            renderOptionSections();
         }
 
         document.addEventListener("keydown", (e) => {
@@ -697,20 +873,37 @@
             document.getElementById("sweet-modal").classList.add("hidden");
         }
 
-        function confirmSweet(level) {
-            if (pendingMenuId === null) return;
-            addToCart(pendingMenuId, level);
+        function confirmOptions() {
+            if (pendingMenuId === null || !selectedSweet) return;
+            addToCart(pendingMenuId, { sweet: selectedSweet, milk: selectedMilk, toppings: [...selectedToppings] });
             closeSweetModal();
         }
 
-        function addToCart(menuId, sweet) {
+        function addToCart(menuId, opts) {
             const item = menus.find(m => m.id === menuId);
-            const key = `${menuId}|${sweet}`;
+            if (!item) return;
+
+            const milkObj = opts.milk ? milkOptions.find(m => m.name === opts.milk) : null;
+            const topObjs = opts.toppings.map(n => toppingOptions.find(t => t.name === n)).filter(Boolean);
+            const unitPrice = item.price + (milkObj ? milkObj.price : 0) + topObjs.reduce((sum, t) => sum + t.price, 0);
+
+            const key = [menuId, opts.sweet, opts.milk || "-", [...opts.toppings].sort().join("+") || "-"].join("|");
             const existing = cart.find(c => c.key === key);
             if (existing) {
                 existing.qty++;
             } else {
-                cart.push({ ...item, sweet, key, qty: 1 });
+                // เก็บเฉพาะข้อมูลที่จำเป็น (ไม่เอารูปภาพเมนูติดไปกับออเดอร์ เพื่อไม่ให้ประวัติการขายหนักเกินไป)
+                cart.push({
+                    id: item.id,
+                    name: item.name,
+                    basePrice: item.price,
+                    price: unitPrice,
+                    sweet: opts.sweet,
+                    milk: opts.milk || "",
+                    toppings: [...opts.toppings],
+                    key,
+                    qty: 1
+                });
             }
             renderCart();
         }
@@ -727,7 +920,7 @@
             let totalQty = 0;
             let totalPrice = 0;
 
-            list.innerHTML = cart.map(item => {
+            list.innerHTML = cart.map((item, index) => {
                 const itemTotal = item.price * item.qty;
                 totalQty += item.qty;
                 totalPrice += itemTotal;
@@ -735,12 +928,12 @@
                     <div class="flex justify-between items-start gap-3 py-3">
                         <div class="min-w-0">
                             <div class="font-medium text-slate-900 leading-snug">${item.name}</div>
-                            <div class="text-xs text-slate-500 mt-0.5">${item.sweet || ''}</div>
+                            <div class="text-xs text-slate-500 mt-0.5 leading-relaxed">${optionText(item)}</div>
                             <div class="text-xs text-slate-500 num">${item.price} ฿ × ${item.qty}</div>
                         </div>
                         <div class="flex items-center gap-3 shrink-0">
                             <span class="font-semibold text-slate-900 num">${itemTotal} ฿</span>
-                            <button onclick="removeFromCart('${item.key}')" class="text-xs text-slate-400 hover:text-rose-600 transition" aria-label="ลบ ${item.name}">ลบ</button>
+                            <button onclick="removeFromCart(${index})" class="text-xs text-slate-400 hover:text-rose-600 transition" aria-label="ลบ ${item.name}">ลบ</button>
                         </div>
                     </div>
                 `;
@@ -750,8 +943,8 @@
             document.getElementById("cart-total").innerText = `${totalPrice} ฿`;
         }
 
-        function removeFromCart(key) {
-            cart = cart.filter(item => item.key !== key);
+        function removeFromCart(index) {
+            cart.splice(index, 1);
             renderCart();
         }
 
@@ -813,6 +1006,8 @@
                     <div>
                         <p class="font-medium text-slate-900">${item.name}</p>
                         <p class="text-xs text-brand-700 font-medium mt-0.5">ระดับความหวาน: ${item.sweet || 'ปกติ'}</p>
+                        ${item.milk !== undefined ? `<p class="text-xs text-slate-600 mt-0.5">นม: ${item.milk || 'ไม่ใส่นม'}</p>` : ''}
+                        ${item.toppings && item.toppings.length ? `<p class="text-xs text-slate-600 mt-0.5">ท็อปปิ้ง: ${item.toppings.join(', ')}</p>` : ''}
                         <p class="text-xs text-slate-500 mt-0.5 num">${item.price} ฿ × ${item.qty} แก้ว</p>
                     </div>
                     <span class="font-semibold text-slate-900 num">${item.price * item.qty} ฿</span>
@@ -844,10 +1039,10 @@
 
             tbody.innerHTML = recentOrders.map(order => {
                 const itemListHtml = order.items.map(i => `
-                    <div class="truncate max-w-[280px] sm:max-w-md">
+                    <div class="max-w-[280px] sm:max-w-md">
                         <span class="font-medium">${i.name}</span>
-                        ${i.sweet ? `<span class="text-brand-700 text-xs font-medium bg-brand-50 border border-brand-200 px-1.5 py-0.5 rounded ml-1">${i.sweet}</span>` : ''}
                         <span class="text-slate-500 text-xs num ml-1">×${i.qty}</span>
+                        ${optionText(i) ? `<div class="mt-0.5"><span class="text-brand-700 text-xs font-medium bg-brand-50 border border-brand-200 px-1.5 py-0.5 rounded">${optionText(i)}</span></div>` : ''}
                     </div>
                 `).join('');
 
@@ -980,7 +1175,7 @@
                 o.items.forEach(i => {
                     r.menuQty[i.name] = (r.menuQty[i.name] || 0) + i.qty;
                     r.menuRev[i.name] = (r.menuRev[i.name] || 0) + i.price * i.qty;
-                    r.lines.push({ ts: d.getTime(), time: `${time} น.`, name: i.name + (i.sweet ? ` (${i.sweet})` : ''), qty: i.qty, total: i.price * i.qty });
+                    r.lines.push({ ts: d.getTime(), time: `${time} น.`, name: i.name + (optionText(i) ? ` (${optionText(i)})` : ''), qty: i.qty, total: i.price * i.qty });
                 });
             });
             return r;
@@ -1291,6 +1486,8 @@
                         "เวลา": `${formattedTime} น.`,
                         "ชื่อเมนู": item.name,
                         "ระดับความหวาน": item.sweet || "-",
+                        "นม": item.milk === undefined ? "-" : (item.milk || "ไม่ใส่นม"),
+                        "ท็อปปิ้ง": item.toppings && item.toppings.length ? item.toppings.join(", ") : "-",
                         "ราคาต่อแก้ว (บาท)": item.price,
                         "จำนวน (แก้ว)": item.qty,
                         "ยอดขายรวม (บาท)": item.price * item.qty,
