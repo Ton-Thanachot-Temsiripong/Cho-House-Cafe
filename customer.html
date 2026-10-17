@@ -78,6 +78,22 @@
             if (savedQR) {
                 showQRImage(savedQR);
             }
+
+            const savedData = localStorage.getItem("customerDisplayData");
+            if (savedData) {
+                try {
+                    updateCustomerView(JSON.parse(savedData));
+                } catch(e) {}
+            }
+        });
+
+        window.addEventListener("storage", (event) => {
+            if (event.key === "customerDisplayData" && event.newValue) {
+                try {
+                    const data = JSON.parse(event.newValue);
+                    updateCustomerView(data);
+                } catch(e) {}
+            }
         });
 
         function uploadStoreQR(e) {
@@ -118,21 +134,34 @@
             qtyEl.innerText = data.totalQty + " แก้ว";
             priceEl.innerText = data.totalPrice.toLocaleString() + " ฿";
 
-            if (data.cart.length === 0) {
+            if (!data.cart || data.cart.length === 0) {
                 listEl.innerHTML = `<p class="text-slate-400 text-center py-12">ยังไม่มีรายการสินค้า</p>`;
                 return;
             }
 
-            listEl.innerHTML = data.cart.map(item => `
-                <div class="py-3 flex justify-between items-start">
-                    <div>
-                        <p class="font-medium text-slate-900">${item.name}</p>
-                        <p class="text-xs text-slate-500">${item.sweet || ''} ${item.milk ? '· ' + item.milk : ''} ${item.toppings && item.toppings.length ? '· ' + item.toppings.join(', ') : ''}</p>
-                        <p class="text-xs text-slate-400 num">${item.price} ฿ × ${item.qty}</p>
+            listEl.innerHTML = data.cart.map(item => {
+                let parts = [];
+                if (item.sweet) parts.push(item.sweet);
+                if (item.milk !== undefined) parts.push(item.milk ? item.milk : "ไม่ใส่นม");
+                if (item.toppings && item.toppings.length) parts.push("ท็อปปิ้ง: " + item.toppings.join(", "));
+                let optionStr = parts.join(" · ");
+
+                let optionHtml = "";
+                if (optionStr) {
+                    optionHtml = '<p class="text-xs text-slate-500 mt-0.5">' + optionStr + '</p>';
+                }
+
+                return `
+                    <div class="py-3 flex justify-between items-start">
+                        <div>
+                            <p class="font-medium text-slate-900">${item.name}</p>
+                            ${optionHtml}
+                            <p class="text-xs text-slate-400 num mt-0.5">${item.price} ฿ × ${item.qty}</p>
+                        </div>
+                        <span class="font-semibold text-slate-900 num">${item.price * item.qty} ฿</span>
                     </div>
-                    <span class="font-semibold text-slate-900 num">${item.price * item.qty} ฿</span>
-                </div>
-            `).join('');
+                `;
+            }).join('');
         }
     </script>
 </body>
