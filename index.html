@@ -43,6 +43,20 @@
             to { opacity: 1; transform: none; }
         }
         @media (prefers-reduced-motion: reduce) { .modal-panel { animation: none; } }
+
+        /* Style สำหรับ Drag and Drop */
+        .menu-card {
+            cursor: grab;
+            user-select: none;
+        }
+        .menu-card:active {
+            cursor: grabbing;
+        }
+        .menu-card.dragging {
+            opacity: 0.4;
+            transform: scale(0.96);
+            border: 2px dashed #0f6b3a !important;
+        }
     </style>
 </head>
 <body class="font-sans">
@@ -67,10 +81,24 @@
                 <!-- เมนูเครื่องดื่ม -->
                 <div class="bg-white border border-slate-200 rounded-xl p-5 sm:p-6">
                     <div class="flex justify-between items-center gap-3 mb-4">
-                        <h2 class="text-base font-semibold text-slate-900">เมนูน้ำปั่น</h2>
-                        <button onclick="openAddMenuModal()" class="bg-white border border-slate-300 hover:border-brand-600 hover:text-brand-700 text-slate-700 text-sm font-medium px-3 py-1.5 rounded-lg transition">
+                        <div>
+                            <h2 class="text-base font-semibold text-slate-900">เมนูน้ำปั่น</h2>
+                            <p class="text-xs text-slate-500 mt-0.5">กดค้างที่การ์ดเมนูแล้วลากสลับตำแหน่งเพื่อจัดเรียงตามต้องการได้</p>
+                        </div>
+                        <button onclick="openAddMenuModal()" class="bg-white border border-slate-300 hover:border-brand-600 hover:text-brand-700 text-slate-700 text-sm font-medium px-3 py-1.5 rounded-lg transition shrink-0">
                             + เพิ่มเมนู
                         </button>
+                    </div>
+                    <!-- ช่องค้นหาเมนู -->
+                    <div class="sticky top-0 z-20 bg-white pb-4 -mt-1 pt-1">
+                        <div class="relative">
+                            <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="9" r="6"/><path d="M14 14l4 4"/></svg>
+                            <input id="menu-search" type="search" autocomplete="off" placeholder="ค้นหาชื่อเมนู เช่น มะม่วง, อาโวคาโด" aria-label="ค้นหาชื่อเมนู"
+                                oninput="onMenuSearch(this.value)" onkeydown="onMenuSearchKey(event)"
+                                class="w-full bg-white border border-slate-300 rounded-lg pl-10 pr-10 py-2.5 text-slate-900 placeholder:text-slate-400">
+                            <button id="menu-search-clear" onclick="clearMenuSearch()" class="hidden absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition" aria-label="ล้างคำค้นหา">✕</button>
+                        </div>
+                        <p id="menu-search-count" class="hidden text-xs text-slate-500 mt-2 num"></p>
                     </div>
                     <div id="menu-grid" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
                         <!-- เมนูจะแสดงที่นี่ -->
@@ -379,6 +407,11 @@
             localStorage.setItem("editedMenus", JSON.stringify(editedMenusMap));
         }
 
+        function saveMenuOrder() {
+            const orderIds = menus.map(m => m.id);
+            localStorage.setItem("menuOrder", JSON.stringify(orderIds));
+        }
+
         function loadSweetOptions() {
             try {
                 const list = JSON.parse(localStorage.getItem("sweetOptions") || "[]");
@@ -426,9 +459,24 @@
             return m;
         }).concat(loadCustomMenus());
 
+        // จัดเรียงเมนูตามลำดับเดิมที่เคยบันทึกไว้
+        try {
+            const savedOrder = JSON.parse(localStorage.getItem("menuOrder") || "[]");
+            if (Array.isArray(savedOrder) && savedOrder.length > 0) {
+                menus.sort((a, b) => {
+                    let indexA = savedOrder.indexOf(a.id);
+                    let indexB = savedOrder.indexOf(b.id);
+                    if (indexA === -1) indexA = 99999;
+                    if (indexB === -1) indexB = 99999;
+                    return indexA - indexB;
+                });
+            }
+        } catch (e) {}
+
         let sweetOptions = loadSweetOptions();
         let milkOptions = loadOptionList("milkOptions", DEFAULT_MILK);
         let toppingOptions = loadOptionList("toppingOptions", DEFAULT_TOPPING);
+        let menuSearch = "";
         let pendingMenuId = null;
         let selectedSweet = null;
         let selectedMilk = null;        // null = ไม่ใส่นม
@@ -441,6 +489,7 @@
         let myChart = null;
         let currentFilteredSales = [];
         let shouldClearImage = false;
+        let draggedElement = null;
 
         function optionText(i) {
             const parts = [];
@@ -474,17 +523,76 @@
             if (tab === "dashboard") renderDashboard();
         }
 
+        // ทำให้ค้นหาง่ายขึ้น: ไม่สนตัวพิมพ์เล็ก/ใหญ่ ช่องว่าง วรรณยุกต์ การันต์
+        // และรวมคำที่เมนูสะกดไม่เหมือนกัน (อะโวคาโด/อาโวคาโด, สับปะรด/สัปปะรด)
+        function normalizeSearch(str) {
+            return String(str)
+                .toLowerCase()
+                .replace(/[\s\u0E48-\u0E4C]/g, "")
+                .replace(/อะโว/g, "อาโว")
+                .replace(/สับ/g, "สัป");
+        }
+
+        function getFilteredMenus() {
+            const q = normalizeSearch(menuSearch);
+            if (!q) return menus;
+            return menus.filter(m => normalizeSearch(m.name).includes(q));
+        }
+
+        function onMenuSearch(value) {
+            menuSearch = value;
+            renderMenu();
+        }
+
+        function clearMenuSearch() {
+            menuSearch = "";
+            const input = document.getElementById("menu-search");
+            if (input) {
+                input.value = "";
+                input.focus();
+            }
+            renderMenu();
+        }
+
+        function onMenuSearchKey(e) {
+            if (e.key === "Escape") {
+                if (menuSearch) {
+                    e.stopPropagation();
+                    clearMenuSearch();
+                }
+            } else if (e.key === "Enter") {
+                // พิมพ์จนเหลือเมนูเดียว กด Enter เพื่อเลือกเมนูนั้นได้เลย
+                const found = getFilteredMenus();
+                if (menuSearch && found.length === 1) openSweetModal(found[0].id);
+            }
+        }
+
         function renderMenu() {
             const grid = document.getElementById("menu-grid");
             if (!grid) return;
 
-            grid.innerHTML = menus.map(item => {
+            const list = getFilteredMenus();
+            const hasQuery = normalizeSearch(menuSearch) !== "";
+            document.getElementById("menu-search-clear").classList.toggle("hidden", menuSearch === "");
+            const countEl = document.getElementById("menu-search-count");
+            countEl.classList.toggle("hidden", !hasQuery);
+            countEl.innerText = `พบ ${list.length} จาก ${menus.length} เมนู`;
+
+            if (list.length === 0) {
+                grid.innerHTML = `<p class="col-span-full text-center text-slate-400 py-12">ไม่พบเมนูที่ค้นหา ลองพิมพ์คำอื่นหรือกด ✕ เพื่อล้างคำค้นหา</p>`;
+                return;
+            }
+
+            // เปิดให้ลากจัดเรียงได้เฉพาะเวลาที่ไม่สั่งค้นหาเมนู
+            const isDraggable = !hasQuery;
+
+            grid.innerHTML = list.map(item => {
                 const imageHtml = item.image 
-                    ? `<img src="${item.image}" alt="${item.name}" class="w-full h-28 object-cover rounded-md mb-2 bg-slate-100">` 
-                    : `<div class="w-full h-28 flex items-center justify-center text-slate-300 text-xs bg-slate-50 rounded-md mb-2 border border-dashed border-slate-200">ไม่มีรูปภาพ</div>`;
+                    ? `<img src="${item.image}" alt="${item.name}" class="w-full h-28 object-cover rounded-md mb-2 bg-slate-100 pointer-events-none">` 
+                    : `<div class="w-full h-28 flex items-center justify-center text-slate-300 text-xs bg-slate-50 rounded-md mb-2 border border-dashed border-slate-200 pointer-events-none">ไม่มีรูปภาพ</div>`;
 
                 return `
-                    <div class="relative bg-white border border-slate-200 rounded-lg p-3 hover:border-brand-600 hover:bg-brand-50 transition flex flex-col justify-between">
+                    <div data-id="${item.id}" ${isDraggable ? 'draggable="true"' : ''} class="menu-card relative bg-white border border-slate-200 rounded-lg p-3 hover:border-brand-600 hover:bg-brand-50 transition flex flex-col justify-between">
                         <!-- ปุ่มแก้ไข & ลบ -->
                         <div class="absolute top-2 right-2 flex gap-1 z-10 bg-white/80 backdrop-blur-xs px-1 rounded shadow-xs">
                             <button onclick="openEditMenuModal(${item.id})" class="text-[11px] text-slate-500 hover:text-brand-700 px-1 py-0.5" title="แก้ไขเมนู">แก้ไข</button>
@@ -501,6 +609,68 @@
                     </div>
                 `;
             }).join('');
+
+            if (isDraggable) {
+                setupDragAndDrop();
+            }
+        }
+
+        // ฟังก์ชันจัดการการลากและวางจัดเรียงเมนู
+        function setupDragAndDrop() {
+            const cards = document.querySelectorAll('.menu-card');
+            const grid = document.getElementById('menu-grid');
+
+            cards.forEach(card => {
+                card.addEventListener('dragstart', (e) => {
+                    draggedElement = card;
+                    card.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                });
+
+                card.addEventListener('dragend', () => {
+                    card.classList.remove('dragging');
+                    draggedElement = null;
+
+                    // อัปเดตลำดับในอาร์เรย์ menus ตามการแสดงผล
+                    const currentCards = Array.from(grid.querySelectorAll('.menu-card'));
+                    const newOrderIds = currentCards.map(c => Number(c.getAttribute('data-id')));
+                    
+                    menus.sort((a, b) => newOrderIds.indexOf(a.id) - newOrderIds.indexOf(b.id));
+                    saveMenuOrder();
+                });
+            });
+
+            grid.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                
+                const afterElement = getDragAfterElement(grid, e.clientX, e.clientY);
+                if (draggedElement) {
+                    if (afterElement == null) {
+                        grid.appendChild(draggedElement);
+                    } else {
+                        grid.insertBefore(draggedElement, afterElement);
+                    }
+                }
+            });
+        }
+
+        function getDragAfterElement(container, x, y) {
+            const draggableElements = [...container.querySelectorAll('.menu-card:not(.dragging)')];
+
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offsetX = x - box.left - box.width / 2;
+                const offsetY = y - box.top - box.height / 2;
+                
+                if (offsetY < 0 && offsetX < 0) {
+                    const distance = Math.hypot(offsetX, offsetY);
+                    if (distance < closest.distance) {
+                        return { distance: distance, element: child };
+                    }
+                }
+                return closest;
+            }, { distance: Number.POSITIVE_INFINITY }).element;
         }
 
         function openAddMenuModal() {
@@ -539,6 +709,7 @@
                     const nextId = Math.max(1000, ...menus.map(m => m.id)) + 1;
                     menus.push({ id: nextId, name, price: Math.round(price), image, custom: true });
                     saveCustomMenus();
+                    saveMenuOrder();
                     renderMenu();
                     closeAddMenuModal();
                 };
@@ -547,6 +718,7 @@
                 const nextId = Math.max(1000, ...menus.map(m => m.id)) + 1;
                 menus.push({ id: nextId, name, price: Math.round(price), image: "", custom: true });
                 saveCustomMenus();
+                saveMenuOrder();
                 renderMenu();
                 closeAddMenuModal();
             }
@@ -641,6 +813,7 @@
             menus = menus.filter(m => m.id !== id);
             cart = cart.filter(c => c.id !== id);
             saveCustomMenus();
+            saveMenuOrder();
             renderMenu();
             renderCart();
         }
@@ -707,7 +880,7 @@
                                 ${optName(g, o)}${g !== "sweet" ? ` <span class="text-slate-500 font-normal num">${o.price > 0 ? "+" + o.price + " ฿" : "ไม่คิดเพิ่ม"}</span>` : ""}
                             </span>
                             <button onclick="openOptionForm('${g}', ${i})" class="text-xs text-slate-500 hover:text-brand-700 px-2.5 py-2.5 border border-slate-200 rounded-lg bg-white transition">แก้ไข</button>
-                            ${(g !== "sweet" || sweetOptions.length > 1) ? `<button onclick="deleteOption('${g}', ${i})" class="text-xs text-slate-400 hover:text-rose-600 px-2.5 py-2.5 border border-slate-200 rounded-lg bg-white transition">ลบ</button>` : ""}
+                            ${(g !== "sweet" || sweetOptions.length > 1) ? `<button onclick="deleteOption('${g}',${i})" class="text-xs text-slate-400 hover:text-rose-600 px-2.5 py-2.5 border border-slate-200 rounded-lg bg-white transition">ลบ</button>` : ""}
                         </div>
                     `).join("");
                     html += sectionHTML(GROUP_NAME[g], `<div class="grid gap-2">${rows}<div>${addChipHTML(g)}</div></div>`);
@@ -892,7 +1065,6 @@
             if (existing) {
                 existing.qty++;
             } else {
-                // เก็บเฉพาะข้อมูลที่จำเป็น (ไม่เอารูปภาพเมนูติดไปกับออเดอร์ เพื่อไม่ให้ประวัติการขายหนักเกินไป)
                 cart.push({
                     id: item.id,
                     name: item.name,
