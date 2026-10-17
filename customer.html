@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>หน้าจอสำหรับลูกค้า - MR. CHO HOUSE</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'IBM Plex Sans Thai', sans-serif; background-color: #f8fafc; color: #1e293b; }
+        .num { font-variant-numeric: tabular-nums; }
+    </style>
+</head>
+<body class="p-6">
+    <div class="max-w-4xl mx-auto space-y-6">
+        <header class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-emerald-800">MR. CHO HOUSE</h1>
+            </div>
+            <div class="text-right">
+                <span id="cust-pay-badge" class="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full text-xs font-semibold">เงินสด</span>
+            </div>
+        </header>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+            <!-- รายการสินค้าฝั่งลูกค้า -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                <h2 class="text-lg font-bold text-slate-800 mb-4 border-b pb-2">รายการสินค้าของคุณ</h2>
+                <div id="cust-cart-list" class="divide-y divide-slate-100 max-h-[300px] overflow-y-auto mb-4">
+                    <p class="text-slate-400 text-center py-12">ยังไม่มีรายการสินค้า</p>
+                </div>
+                <div class="border-t pt-4 space-y-2">
+                    <div class="flex justify-between text-sm text-slate-600">
+                        <span>จำนวนรวม</span>
+                        <span id="cust-total-qty" class="num font-semibold">0 แก้ว</span>
+                    </div>
+                    <div class="flex justify-between text-xl font-bold text-slate-900">
+                        <span>ยอดชำระสุทธิ</span>
+                        <span id="cust-total-price" class="num text-emerald-700 text-2xl">0 ฿</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ส่วนแสดง QR Code สำหรับสแกนจ่าย -->
+            <div id="cust-qr-section" class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm text-center flex flex-col items-center justify-center opacity-40 pointer-events-none transition">
+                <h2 class="text-lg font-bold text-slate-800 mb-2">สแกนจ่ายผ่าน QR Code</h2>
+                <p class="text-xs text-slate-500 mb-4">พร้อมเพย์ / Mobile Banking ทุกธนาคาร</p>
+                
+                <div class="relative w-56 h-56 bg-slate-50 border-2 border-dashed border-slate-300 rounded-2xl flex items-center justify-center overflow-hidden group">
+                    <img id="cust-qr-img" src="" alt="QR Code สำหรับชำระเงิน" class="w-full h-full object-contain hidden">
+                    <div id="cust-qr-placeholder" class="text-slate-400 text-xs p-4 text-center">
+                        ยังไม่ได้ตั้งค่ารูป QR Code<br>คลิกอัปโหลดด้านล่าง
+                    </div>
+                    <label class="absolute inset-0 bg-slate-900/60 text-white flex items-center justify-center text-xs font-semibold opacity-0 group-hover:opacity-100 transition cursor-pointer">
+                        เปลี่ยนรูป QR Code
+                        <input type="file" accept="image/*" onchange="uploadStoreQR(event)" class="hidden">
+                    </label>
+                </div>
+                <div class="mt-3">
+                    <label class="text-xs text-emerald-700 font-medium underline cursor-pointer hover:text-emerald-800">
+                        อัปโหลดรูป QR PromptPay ของร้าน
+                        <input type="file" accept="image/*" onchange="uploadStoreQR(event)" class="hidden">
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        window.openerWindowRef = window.opener;
+        if (window.openerWindowRef) {
+            window.openerWindowRef.customerDisplayRef = window;
+        }
+
+        document.addEventListener("DOMContentLoaded", () => {
+            const savedQR = localStorage.getItem("storeQRCode");
+            if (savedQR) {
+                showQRImage(savedQR);
+            }
+        });
+
+        function uploadStoreQR(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(evt) {
+                    const base64Img = evt.target.result;
+                    localStorage.setItem("storeQRCode", base64Img);
+                    showQRImage(base64Img);
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function showQRImage(src) {
+            const img = document.getElementById("cust-qr-img");
+            const placeholder = document.getElementById("cust-qr-placeholder");
+            img.src = src;
+            img.classList.remove("hidden");
+            placeholder.classList.add("hidden");
+        }
+
+        function updateCustomerView(data) {
+            const listEl = document.getElementById("cust-cart-list");
+            const qtyEl = document.getElementById("cust-total-qty");
+            const priceEl = document.getElementById("cust-total-price");
+            const badgeEl = document.getElementById("cust-pay-badge");
+            const qrSec = document.getElementById("cust-qr-section");
+
+            badgeEl.innerText = data.paymentMethod;
+            if (data.paymentMethod === 'สแกน QR') {
+                qrSec.classList.remove('opacity-40', 'pointer-events-none');
+            } else {
+                qrSec.classList.add('opacity-40', 'pointer-events-none');
+            }
+
+            qtyEl.innerText = data.totalQty + " แก้ว";
+            priceEl.innerText = data.totalPrice.toLocaleString() + " ฿";
+
+            if (data.cart.length === 0) {
+                listEl.innerHTML = `<p class="text-slate-400 text-center py-12">ยังไม่มีรายการสินค้า</p>`;
+                return;
+            }
+
+            listEl.innerHTML = data.cart.map(item => `
+                <div class="py-3 flex justify-between items-start">
+                    <div>
+                        <p class="font-medium text-slate-900">${item.name}</p>
+                        <p class="text-xs text-slate-500">${item.sweet || ''} ${item.milk ? '· ' + item.milk : ''} ${item.toppings && item.toppings.length ? '· ' + item.toppings.join(', ') : ''}</p>
+                        <p class="text-xs text-slate-400 num">${item.price} ฿ × ${item.qty}</p>
+                    </div>
+                    <span class="font-semibold text-slate-900 num">${item.price * item.qty} ฿</span>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>
