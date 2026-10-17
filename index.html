@@ -26,37 +26,21 @@
     <style>
         body { background-color: #f3f5f3; color: #1e2822; -webkit-font-smoothing: antialiased; }
         .num { font-variant-numeric: tabular-nums; }
-
         :focus-visible { outline: 2px solid #0f6b3a; outline-offset: 2px; }
-
-        /* แท็บ / ตัวกรองแบบ segmented */
         .tab-btn { color: #4b5a51; }
         .tab-btn.active { background-color: #ffffff; color: #0f6b3a; box-shadow: 0 1px 2px rgba(15, 40, 25, 0.12); }
-
         .pay-btn { border: 1px solid #cfd8d2; background-color: #ffffff; color: #3a4a40; }
         .pay-btn:hover { border-color: #0f6b3a; }
         .pay-btn.selected { border-color: #0f6b3a; background-color: #0f6b3a; color: #ffffff; }
-
         .modal-panel { animation: modal-in 160ms ease-out; }
         @keyframes modal-in {
             from { opacity: 0; transform: translateY(8px) scale(0.98); }
             to { opacity: 1; transform: none; }
         }
         @media (prefers-reduced-motion: reduce) { .modal-panel { animation: none; } }
-
-        /* Style สำหรับ Drag and Drop */
-        .menu-card {
-            cursor: grab;
-            user-select: none;
-        }
-        .menu-card:active {
-            cursor: grabbing;
-        }
-        .menu-card.dragging {
-            opacity: 0.4;
-            transform: scale(0.96);
-            border: 2px dashed #0f6b3a !important;
-        }
+        .menu-card { cursor: grab; user-select: none; }
+        .menu-card:active { cursor: grabbing; }
+        .menu-card.dragging { opacity: 0.4; transform: scale(0.96); border: 2px dashed #0f6b3a !important; }
     </style>
 </head>
 <body class="font-sans">
@@ -67,10 +51,15 @@
             <div class="flex items-baseline gap-3 min-w-0">
                 <h1 class="text-lg sm:text-xl font-bold tracking-tight text-brand-700 truncate">MR. CHO HOUSE</h1>
             </div>
-            <nav class="flex gap-1 bg-slate-100 p-1 rounded-lg shrink-0">
-                <button onclick="switchTab('pos')" id="tab-pos" class="tab-btn active px-3 sm:px-4 py-1.5 rounded-md text-sm font-medium transition">หน้าร้าน</button>
-                <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn px-3 sm:px-4 py-1.5 rounded-md text-sm font-medium transition">สรุปยอดขาย</button>
-            </nav>
+            <div class="flex items-center gap-2">
+                <button onclick="openCustomerDisplayWindow()" class="bg-brand-50 border border-brand-200 hover:bg-brand-100 text-brand-700 text-xs sm:text-sm font-medium px-3 py-1.5 rounded-lg transition flex items-center gap-1.5">
+                    <span>🖥️</span> เปิดจอลูกค้า
+                </button>
+                <nav class="flex gap-1 bg-slate-100 p-1 rounded-lg shrink-0">
+                    <button onclick="switchTab('pos')" id="tab-pos" class="tab-btn active px-3 sm:px-4 py-1.5 rounded-md text-sm font-medium transition">หน้าร้าน</button>
+                    <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn px-3 sm:px-4 py-1.5 rounded-md text-sm font-medium transition">สรุปยอดขาย</button>
+                </nav>
+            </div>
         </div>
     </header>
 
@@ -85,9 +74,14 @@
                             <h2 class="text-base font-semibold text-slate-900">เมนูน้ำปั่น</h2>
                             <p class="text-xs text-slate-500 mt-0.5">กดค้างที่การ์ดเมนูแล้วลากสลับตำแหน่งเพื่อจัดเรียงตามต้องการได้</p>
                         </div>
-                        <button onclick="openAddMenuModal()" class="bg-white border border-slate-300 hover:border-brand-600 hover:text-brand-700 text-slate-700 text-sm font-medium px-3 py-1.5 rounded-lg transition shrink-0">
-                            + เพิ่มเมนู
-                        </button>
+                        <div class="flex items-center gap-2 shrink-0">
+                            <button onclick="resetDeletedMenus()" class="bg-white border border-slate-300 hover:border-slate-400 text-slate-600 text-sm font-medium px-3 py-1.5 rounded-lg transition" title="นำเมนูตั้งต้นที่ถูกลบกลับมาทั้งหมด">
+                                ↺ คืนค่าเมนูเริ่มต้น
+                            </button>
+                            <button onclick="openAddMenuModal()" class="bg-white border border-slate-300 hover:border-brand-600 hover:text-brand-700 text-slate-700 text-sm font-medium px-3 py-1.5 rounded-lg transition">
+                                + เพิ่มเมนู
+                            </button>
+                        </div>
                     </div>
                     <!-- ช่องค้นหาเมนู -->
                     <div class="sticky top-0 z-20 bg-white pb-4 -mt-1 pt-1">
@@ -396,6 +390,17 @@
             localStorage.setItem("customMenus", JSON.stringify(list));
         }
 
+        function loadDeletedMenus() {
+            try {
+                return JSON.parse(localStorage.getItem("deletedMenus") || "[]");
+            } catch (e) {
+                return [];
+            }
+        }
+        function saveDeletedMenus() {
+            localStorage.setItem("deletedMenus", JSON.stringify(deletedMenuIds));
+        }
+
         function loadEditedMenus() {
             try {
                 return JSON.parse(localStorage.getItem("editedMenus") || "{}");
@@ -423,7 +428,6 @@
             localStorage.setItem("sweetOptions", JSON.stringify(sweetOptions));
         }
 
-        // นมและท็อปปิ้ง: เก็บเป็น { name, price } โดย price คือราคาที่บวกเพิ่มต่อแก้ว
         const DEFAULT_MILK = [
             { name: "นมสด", price: 0 },
             { name: "นมโอ๊ต", price: 10 },
@@ -451,15 +455,18 @@
             localStorage.setItem("toppingOptions", JSON.stringify(toppingOptions));
         }
 
+        let deletedMenuIds = loadDeletedMenus();
         let editedMenusMap = loadEditedMenus();
-        let menus = defaultMenus.map(m => {
-            if (editedMenusMap[m.id]) {
-                return { ...m, ...editedMenusMap[m.id] };
-            }
-            return m;
-        }).concat(loadCustomMenus());
+        
+        let menus = defaultMenus
+            .filter(m => !deletedMenuIds.includes(m.id))
+            .map(m => {
+                if (editedMenusMap[m.id]) {
+                    return { ...m, ...editedMenusMap[m.id] };
+                }
+                return m;
+            }).concat(loadCustomMenus());
 
-        // จัดเรียงเมนูตามลำดับเดิมที่เคยบันทึกไว้
         try {
             const savedOrder = JSON.parse(localStorage.getItem("menuOrder") || "[]");
             if (Array.isArray(savedOrder) && savedOrder.length > 0) {
@@ -479,8 +486,8 @@
         let menuSearch = "";
         let pendingMenuId = null;
         let selectedSweet = null;
-        let selectedMilk = null;        // null = ไม่ใส่นม
-        let selectedToppings = [];      // เลือกได้หลายอย่าง
+        let selectedMilk = null;
+        let selectedToppings = [];
         let optionManageMode = false;
         let optionForm = { group: null, index: -1 };
         let cart = [];
@@ -511,7 +518,44 @@
             initPeriods();
             renderRecentOrders();
             renderDashboard();
+            syncToCustomerDisplay();
         });
+
+        // ================= เปิดหน้าจอลูกค้า (Customer Display) =================
+        function openCustomerDisplayWindow() {
+            const width = 800;
+            const height = 700;
+            const left = window.screen.width ? (window.screen.width - width) : 100;
+            const top = window.screen.height ? (window.screen.height - height) : 100;
+            
+            const customerWin = window.open("customer.html", "customerDisplayWindow", `width=${width},height=${height},left=${left},top=${top},toolbar=no,location=no,status=no,menubar=no,scrollbars=yes`);
+            
+            if (!customerWin) {
+                alert("เบราว์เซอร์บล็อกการเปิดหน้าต่างใหม่ กรุณาอนุญาต Pop-up สำหรับเว็บไซต์นี้");
+            }
+        }
+
+        function syncToCustomerDisplay() {
+            const totalQty = cart.reduce((sum, i) => sum + i.qty, 0);
+            const totalPrice = cart.reduce((sum, i) => sum + (i.price * i.qty), 0);
+            const payload = {
+                cart: cart,
+                totalQty: totalQty,
+                totalPrice: totalPrice,
+                paymentMethod: selectedPayment
+            };
+            
+            // บันทึกลง localStorage เพื่อให้จอลูกค้าอัปเดตแบบเรียลไทม์ผ่าน storage event
+            localStorage.setItem('customerDisplayData', JSON.stringify(payload));
+
+            try {
+                if (window.customerDisplayRef && !window.customerDisplayRef.closed) {
+                    if (typeof window.customerDisplayRef.updateCustomerView === 'function') {
+                        window.customerDisplayRef.updateCustomerView(payload);
+                    }
+                }
+            } catch (e) {}
+        }
 
         function switchTab(tab) {
             document.getElementById("page-pos").classList.toggle("hidden", tab !== "pos");
@@ -523,8 +567,6 @@
             if (tab === "dashboard") renderDashboard();
         }
 
-        // ทำให้ค้นหาง่ายขึ้น: ไม่สนตัวพิมพ์เล็ก/ใหญ่ ช่องว่าง วรรณยุกต์ การันต์
-        // และรวมคำที่เมนูสะกดไม่เหมือนกัน (อะโวคาโด/อาโวคาโด, สับปะรด/สัปปะรด)
         function normalizeSearch(str) {
             return String(str)
                 .toLowerCase()
@@ -561,7 +603,6 @@
                     clearMenuSearch();
                 }
             } else if (e.key === "Enter") {
-                // พิมพ์จนเหลือเมนูเดียว กด Enter เพื่อเลือกเมนูนั้นได้เลย
                 const found = getFilteredMenus();
                 if (menuSearch && found.length === 1) openSweetModal(found[0].id);
             }
@@ -583,7 +624,6 @@
                 return;
             }
 
-            // เปิดให้ลากจัดเรียงได้เฉพาะเวลาที่ไม่สั่งค้นหาเมนู
             const isDraggable = !hasQuery;
 
             grid.innerHTML = list.map(item => {
@@ -593,10 +633,9 @@
 
                 return `
                     <div data-id="${item.id}" ${isDraggable ? 'draggable="true"' : ''} class="menu-card relative bg-white border border-slate-200 rounded-lg p-3 hover:border-brand-600 hover:bg-brand-50 transition flex flex-col justify-between">
-                        <!-- ปุ่มแก้ไข & ลบ -->
                         <div class="absolute top-2 right-2 flex gap-1 z-10 bg-white/80 backdrop-blur-xs px-1 rounded shadow-xs">
                             <button onclick="openEditMenuModal(${item.id})" class="text-[11px] text-slate-500 hover:text-brand-700 px-1 py-0.5" title="แก้ไขเมนู">แก้ไข</button>
-                            ${item.custom ? `<button onclick="removeCustomMenu(${item.id})" class="text-[11px] text-slate-400 hover:text-rose-600 px-1 py-0.5" title="ลบเมนู">ลบ</button>` : ''}
+                            <button onclick="removeMenu(${item.id})" class="text-[11px] text-slate-400 hover:text-rose-600 px-1 py-0.5" title="ลบเมนู">ลบ</button>
                         </div>
 
                         <button onclick="openSweetModal(${item.id})" class="w-full text-left flex flex-col justify-between h-full">
@@ -615,7 +654,6 @@
             }
         }
 
-        // ฟังก์ชันจัดการการลากและวางจัดเรียงเมนู
         function setupDragAndDrop() {
             const cards = document.querySelectorAll('.menu-card');
             const grid = document.getElementById('menu-grid');
@@ -631,7 +669,6 @@
                     card.classList.remove('dragging');
                     draggedElement = null;
 
-                    // อัปเดตลำดับในอาร์เรย์ menus ตามการแสดงผล
                     const currentCards = Array.from(grid.querySelectorAll('.menu-card'));
                     const newOrderIds = currentCards.map(c => Number(c.getAttribute('data-id')));
                     
@@ -657,12 +694,10 @@
 
         function getDragAfterElement(container, x, y) {
             const draggableElements = [...container.querySelectorAll('.menu-card:not(.dragging)')];
-
             return draggableElements.reduce((closest, child) => {
                 const box = child.getBoundingClientRect();
                 const offsetX = x - box.left - box.width / 2;
                 const offsetY = y - box.top - box.height / 2;
-                
                 if (offsetY < 0 && offsetX < 0) {
                     const distance = Math.hypot(offsetX, offsetY);
                     if (distance < closest.distance) {
@@ -806,16 +841,34 @@
             }
         }
 
-        function removeCustomMenu(id) {
-            const item = menus.find(m => m.id === id && m.custom);
+        function removeMenu(id) {
+            const item = menus.find(m => m.id === id);
             if (!item) return;
             if (!confirm(`ลบเมนู "${item.name}" ออกจากหน้าร้าน?\n\nประวัติการขายเดิมจะไม่ถูกลบ`)) return;
+
             menus = menus.filter(m => m.id !== id);
             cart = cart.filter(c => c.id !== id);
-            saveCustomMenus();
+
+            if (item.custom) {
+                saveCustomMenus();
+            } else {
+                if (!deletedMenuIds.includes(id)) {
+                    deletedMenuIds.push(id);
+                    saveDeletedMenus();
+                }
+            }
             saveMenuOrder();
             renderMenu();
             renderCart();
+            syncToCustomerDisplay();
+        }
+
+        function resetDeletedMenus() {
+            if (confirm("ต้องการนำเมนูเริ่มต้นที่ถูกลบทั้งหมดกลับมาแสดงผลใช่หรือไม่?")) {
+                localStorage.removeItem("deletedMenus");
+                localStorage.removeItem("editedMenus");
+                location.reload();
+            }
         }
 
         const GROUP_LABEL = { sweet: "ระดับความหวาน", milk: "นม", topping: "ท็อปปิ้ง (เลือกได้หลายอย่าง)" };
@@ -880,7 +933,7 @@
                                 ${optName(g, o)}${g !== "sweet" ? ` <span class="text-slate-500 font-normal num">${o.price > 0 ? "+" + o.price + " ฿" : "ไม่คิดเพิ่ม"}</span>` : ""}
                             </span>
                             <button onclick="openOptionForm('${g}', ${i})" class="text-xs text-slate-500 hover:text-brand-700 px-2.5 py-2.5 border border-slate-200 rounded-lg bg-white transition">แก้ไข</button>
-                            ${(g !== "sweet" || sweetOptions.length > 1) ? `<button onclick="deleteOption('${g}',${i})" class="text-xs text-slate-400 hover:text-rose-600 px-2.5 py-2.5 border border-slate-200 rounded-lg bg-white transition">ลบ</button>` : ""}
+                            ${(g !== "sweet" || sweetOptions.length > 1) ? `<button onclick="deleteOption('${g}', ${i})" class="text-xs text-slate-400 hover:text-rose-600 px-2.5 py-2.5 border border-slate-200 rounded-lg bg-white transition">ลบ</button>` : ""}
                         </div>
                     `).join("");
                     html += sectionHTML(GROUP_NAME[g], `<div class="grid gap-2">${rows}<div>${addChipHTML(g)}</div></div>`);
@@ -1078,6 +1131,7 @@
                 });
             }
             renderCart();
+            syncToCustomerDisplay();
         }
 
         function renderCart() {
@@ -1118,6 +1172,7 @@
         function removeFromCart(index) {
             cart.splice(index, 1);
             renderCart();
+            syncToCustomerDisplay();
         }
 
         function setPaymentMethod(method) {
@@ -1128,6 +1183,7 @@
 
             document.getElementById("icon-cash").classList.toggle("hidden", !isCash);
             document.getElementById("icon-qr").classList.toggle("hidden", isCash);
+            syncToCustomerDisplay();
         }
 
         function checkout() {
@@ -1154,6 +1210,7 @@
             alert("บันทึกการขายสำเร็จ!");
             cart = [];
             renderCart();
+            syncToCustomerDisplay();
             renderRecentOrders();
         }
 
@@ -1173,18 +1230,24 @@
             badgeEl.className = order.paymentMethod === 'เงินสด' ? 'px-2.5 py-1 rounded-md text-xs font-medium bg-brand-50 text-brand-700 border border-brand-200' : 'px-2.5 py-1 rounded-md text-xs font-medium bg-slate-100 text-slate-700 border border-slate-200';
 
             const itemsContainer = document.getElementById("detail-order-items");
-            itemsContainer.innerHTML = order.items.map(item => `
-                <div class="py-2.5 flex justify-between items-center text-sm">
-                    <div>
-                        <p class="font-medium text-slate-900">${item.name}</p>
-                        <p class="text-xs text-brand-700 font-medium mt-0.5">ระดับความหวาน: ${item.sweet || 'ปกติ'}</p>
-                        ${item.milk !== undefined ? `<p class="text-xs text-slate-600 mt-0.5">นม: ${item.milk || 'ไม่ใส่นม'}</p>` : ''}
-                        ${item.toppings && item.toppings.length ? `<p class="text-xs text-slate-600 mt-0.5">ท็อปปิ้ง: ${item.toppings.join(', ')}</p>` : ''}
-                        <p class="text-xs text-slate-500 mt-0.5 num">${item.price} ฿ × ${item.qty} แก้ว</p>
+            itemsContainer.innerHTML = order.items.map(item => {
+                let milkText = item.milk !== undefined ? (item.milk ? item.milk : "ไม่ใส่นม") : "";
+                let milkHtml = milkText ? `<p class="text-xs text-slate-600 mt-0.5">นม: ${milkText}</p>` : "";
+                let toppingHtml = item.toppings && item.toppings.length ? `<p class="text-xs text-slate-600 mt-0.5">ท็อปปิ้ง: ${item.toppings.join(', ')}</p>` : "";
+
+                return `
+                    <div class="py-2.5 flex justify-between items-center text-sm">
+                        <div>
+                            <p class="font-medium text-slate-900">${item.name}</p>
+                            <p class="text-xs text-brand-700 font-medium mt-0.5">ระดับความหวาน: ${item.sweet || 'ปกติ'}</p>
+                            ${milkHtml}
+                            ${toppingHtml}
+                            <p class="text-xs text-slate-500 mt-0.5 num">${item.price} ฿ × ${item.qty} แก้ว</p>
+                        </div>
+                        <span class="font-semibold text-slate-900 num">${item.price * item.qty} ฿</span>
                     </div>
-                    <span class="font-semibold text-slate-900 num">${item.price * item.qty} ฿</span>
-                </div>
-            `).join('');
+                `;
+            }).join('');
 
             document.getElementById("detail-order-qty").innerText = `${order.totalQty} แก้ว`;
             document.getElementById("detail-order-total").innerText = `${order.totalPrice.toLocaleString()} ฿`;
@@ -1210,28 +1273,22 @@
             const recentOrders = [...salesHistory].reverse().slice(0, 5);
 
             tbody.innerHTML = recentOrders.map(order => {
-                const itemListHtml = order.items.map(i => `
-                    <div class="max-w-[280px] sm:max-w-md">
-                        <span class="font-medium">${i.name}</span>
-                        <span class="text-slate-500 text-xs num ml-1">×${i.qty}</span>
-                        ${optionText(i) ? `<div class="mt-0.5"><span class="text-brand-700 text-xs font-medium bg-brand-50 border border-brand-200 px-1.5 py-0.5 rounded">${optionText(i)}</span></div>` : ''}
-                    </div>
-                `).join('');
+                const itemListHtml = order.items.map(i => {
+                    const optStr = optionText(i);
+                    const optBadge = optStr ? `<div class="mt-0.5"><span class="text-brand-700 text-xs font-medium bg-brand-50 border border-brand-200 px-1.5 py-0.5 rounded">${optStr}</span></div>` : "";
+                    return `
+                        <div class="max-w-[280px] sm:max-w-md">
+                            <span class="font-medium">${i.name}</span>
+                            <span class="text-slate-500 text-xs num ml-1">×${i.qty}</span>
+                            ${optBadge}
+                        </div>
+                    `;
+                }).join('');
 
                 const badgeColor = order.paymentMethod === 'เงินสด' ? 'bg-brand-50 text-brand-700' : 'bg-slate-100 text-slate-700';
-                
                 const orderDate = order.timestamp ? new Date(order.timestamp) : new Date(order.date);
-                
-                const formattedDate = orderDate.toLocaleDateString('th-TH', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric'
-                });
-                const formattedTime = orderDate.toLocaleTimeString('th-TH', {
-                    hour: '2-digit',
-                    minute: '2-digit'
-                });
-
+                const formattedDate = orderDate.toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: 'numeric' });
+                const formattedTime = orderDate.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' });
                 const fullDateTimeStr = `${formattedDate} ${formattedTime} น.`;
 
                 return `
@@ -1681,6 +1738,7 @@
                 localStorage.removeItem("salesHistory");
                 cart = [];
                 renderCart();
+                syncToCustomerDisplay();
                 renderRecentOrders();
                 renderDashboard();
                 alert("ล้างข้อมูลการขายทั้งหมดเรียบร้อยแล้วครับ");
